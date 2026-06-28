@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from models import db, User, Student, Company
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
+import json
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -24,7 +25,7 @@ def login():
         if company and not company.is_approved:
             return jsonify({"msg": "Company account is pending admin approval"}), 403
 
-    access_token = create_access_token(identity={"id": user.id, "role": user.role, "email": user.email})
+    access_token = create_access_token(identity=json.dumps({"id": user.id, "role": user.role, "email": user.email}))
     return jsonify(access_token=access_token, role=user.role)
 
 @auth_bp.route('/register/student', methods=['POST'])

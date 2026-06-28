@@ -35,7 +35,12 @@ const routes = [
     path: '/student', 
     name: 'StudentDashboard', 
     component: StudentDashboard,
-    meta: { requiresAuth: true, role: 'student' }
+    meta: { requiresAuth: true, role: 'student' },
+    children: [
+      { path: 'profile', name: 'StudentProfile', component: () => import('../views/student/Profile.vue') },
+      { path: 'jobs', name: 'StudentJobs', component: () => import('../views/student/Jobs.vue') },
+      { path: 'applications', name: 'StudentApplications', component: () => import('../views/student/Applications.vue') }
+    ]
   }
 ]
 

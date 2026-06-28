@@ -5,8 +5,10 @@ from datetime import datetime
 
 company_bp = Blueprint('company', __name__)
 
+import json
+
 def get_company_or_403():
-    current_user = get_jwt_identity()
+    current_user = json.loads(get_jwt_identity())
     if current_user.get('role') != 'company':
         return None, jsonify({"msg": "Unauthorized role"}), 403
         

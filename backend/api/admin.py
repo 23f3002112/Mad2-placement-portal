@@ -4,8 +4,10 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 
 admin_bp = Blueprint('admin', __name__)
 
+import json
+
 def admin_required():
-    current_user = get_jwt_identity()
+    current_user = json.loads(get_jwt_identity())
     if current_user.get('role') != 'admin':
         return False
     return True
