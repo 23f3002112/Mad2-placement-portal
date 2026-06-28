@@ -176,3 +176,57 @@ def reject_job(job_id):
     job.status = 'Rejected'
     db.session.commit()
     return jsonify({"msg": "Job rejected successfully"}), 200
+
+@admin_bp.route('/applications', methods=['GET'])
+@jwt_required()
+def get_all_applications():
+    if not admin_required():
+        return jsonify({"msg": "Unauthorized"}), 403
+        
+    applications = Application.query.all()
+    result = []
+    for app in applications:
+        student = Student.query.get(app.student_id)
+        job = JobPosition.query.get(app.job_id)
+        result.append({
+            "id": app.id,
+            "student_name": student.name,
+            "job_title": job.title,
+            "company_name": job.company.name if job.company else "Unknown",
+            "status": app.status,
+            "date_applied": app.date_applied,
+            "student_id": student.id
+        })
+    return jsonify(result), 200
+
+@admin_bp.route('/students/<int:student_id>', methods=['GET'])
+@jwt_required()
+def get_student_details(student_id):
+    if not admin_required():
+        return jsonify({"msg": "Unauthorized"}), 403
+        
+    student = Student.query.get_or_404(student_id)
+    user = User.query.get(student.user_id)
+    
+    applications = Application.query.filter_by(student_id=student.id).all()
+    apps_data = []
+    for app in applications:
+        job = JobPosition.query.get(app.job_id)
+        apps_data.append({
+            "id": app.id,
+            "job_title": job.title,
+            "company_name": job.company.name if job.company else "Unknown",
+            "status": app.status,
+            "date_applied": app.date_applied
+        })
+        
+    return jsonify({
+        "id": student.id,
+        "name": student.name,
+        "education": student.education,
+        "skills": student.skills,
+        "resume_url": student.resume_url,
+        "experience": student.experience,
+        "email": user.email if user else "",
+        "applications": apps_data
+    }), 200

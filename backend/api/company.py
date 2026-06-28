@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from models import db, User, Student, Company, JobPosition, Application
+from models import db, User, Student, Company, JobPosition, Application, Placement
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime
 
@@ -137,11 +137,15 @@ def get_job_applications(job_id):
     result = []
     for app in applications:
         student = Student.query.get(app.student_id)
+        user = User.query.get(student.user_id)
         result.append({
             "id": app.id,
             "student_name": student.name,
             "education": student.education,
             "skills": student.skills,
+            "resume_url": student.resume_url,
+            "experience": student.experience,
+            "email": user.email if user else "",
             "status": app.status,
             "feedback": app.feedback,
             "interview_date": app.interview_date.isoformat() if app.interview_date else None,
@@ -168,6 +172,17 @@ def update_application_status(app_id):
     
     if new_status:
         application.status = new_status
+        if new_status == 'Placed':
+            existing_placement = Placement.query.filter_by(student_id=application.student_id, job_id=job.id).first()
+            if not existing_placement:
+                placement = Placement(
+                    student_id=application.student_id,
+                    company_id=company.id,
+                    job_id=job.id,
+                    position_offered=job.title,
+                    salary_offered=job.salary
+                )
+                db.session.add(placement)
     if feedback is not None:
         application.feedback = feedback
     if interview_date:

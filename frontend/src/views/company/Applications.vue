@@ -32,6 +32,7 @@
               </div>
             </td>
             <td>
+              <button class="btn btn-sm btn-info me-2" @click="openProfile(app)">View Profile</button>
               <button class="btn btn-sm btn-primary" @click="openModal(app)">Update Status</button>
             </td>
           </tr>
@@ -54,7 +55,9 @@
                 <select v-model="updateForm.status" class="form-select">
                   <option value="Applied">Applied</option>
                   <option value="Shortlisted">Shortlisted</option>
-                  <option value="Selected">Selected</option>
+                  <option value="Interview">Interview</option>
+                  <option value="Offer">Offer</option>
+                  <option value="Placed">Placed</option>
                   <option value="Rejected">Rejected</option>
                 </select>
               </div>
@@ -75,6 +78,29 @@
         </div>
       </div>
     </div>
+
+    <!-- View Profile Modal -->
+    <div v-if="showProfileModal" class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Student Profile</h5>
+            <button type="button" class="btn-close" @click="showProfileModal = false"></button>
+          </div>
+          <div class="modal-body" v-if="selectedProfile">
+            <p><strong>Name:</strong> {{ selectedProfile.student_name }}</p>
+            <p><strong>Email:</strong> {{ selectedProfile.email }}</p>
+            <p><strong>Education:</strong> {{ selectedProfile.education }}</p>
+            <p><strong>Skills:</strong> {{ selectedProfile.skills }}</p>
+            <p><strong>Experience:</strong><br/> <span style="white-space: pre-wrap">{{ selectedProfile.experience || 'None provided' }}</span></p>
+            <p><strong>Resume URL:</strong> <a :href="selectedProfile.resume_url" target="_blank" v-if="selectedProfile.resume_url">View Resume</a><span v-else>None</span></p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" @click="showProfileModal = false">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -87,6 +113,8 @@ export default {
       applications: [],
       jobId: null,
       showModal: false,
+      showProfileModal: false,
+      selectedProfile: null,
       updateForm: {
         id: null,
         status: '',
@@ -119,10 +147,16 @@ export default {
       }
     },
     statusClass(status) {
-      if (status === 'Selected') return 'bg-success';
-      if (status === 'Shortlisted') return 'bg-info';
+      if (status === 'Placed') return 'bg-success';
+      if (status === 'Offer' || status === 'Selected') return 'bg-success bg-opacity-75';
+      if (status === 'Interview') return 'bg-warning text-dark';
+      if (status === 'Shortlisted') return 'bg-info text-dark';
       if (status === 'Rejected') return 'bg-danger';
       return 'bg-secondary';
+    },
+    openProfile(app) {
+      this.selectedProfile = app;
+      this.showProfileModal = true;
     },
     openModal(app) {
       this.updateForm = {
@@ -143,7 +177,7 @@ export default {
           status: this.updateForm.status,
           feedback: this.updateForm.feedback
         };
-        if (this.updateForm.status === 'Shortlisted' && this.updateForm.interview_date) {
+        if ((this.updateForm.status === 'Shortlisted' || this.updateForm.status === 'Interview') && this.updateForm.interview_date) {
           payload.interview_date = new Date(this.updateForm.interview_date).toISOString();
         }
         

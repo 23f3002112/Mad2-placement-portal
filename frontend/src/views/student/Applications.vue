@@ -90,7 +90,9 @@ export default {
       }
     },
     statusClass(status) {
-      if (status === 'Selected') return 'bg-success';
+      if (status === 'Placed') return 'bg-success';
+      if (status === 'Offer' || status === 'Selected') return 'bg-success bg-opacity-75';
+      if (status === 'Interview') return 'bg-warning text-dark';
       if (status === 'Shortlisted') return 'bg-info text-dark';
       if (status === 'Rejected') return 'bg-danger';
       return 'bg-secondary';

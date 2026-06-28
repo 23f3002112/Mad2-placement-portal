@@ -17,7 +17,8 @@ const routes = [
     children: [
       { path: 'companies', name: 'AdminCompanies', component: () => import('../views/admin/Companies.vue') },
       { path: 'students', name: 'AdminStudents', component: () => import('../views/admin/Students.vue') },
-      { path: 'jobs', name: 'AdminJobs', component: () => import('../views/admin/Jobs.vue') }
+      { path: 'jobs', name: 'AdminJobs', component: () => import('../views/admin/Jobs.vue') },
+      { path: 'applications', name: 'AdminApplications', component: () => import('../views/admin/Applications.vue') }
     ]
   },
   { 
