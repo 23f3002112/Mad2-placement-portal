@@ -39,7 +39,7 @@ class JobPosition(db.Model):
     description = db.Column(db.Text)
     salary = db.Column(db.String(50))
     skills_required = db.Column(db.String(200))
-    status = db.Column(db.String(20), default='Active') # 'Active', 'Closed'
+    status = db.Column(db.String(20), default='Pending') # 'Pending', 'Approved', 'Closed', 'Rejected'
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     company = db.relationship('Company', backref=db.backref('job_positions', lazy=True))

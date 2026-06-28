@@ -13,7 +13,12 @@ const routes = [
     path: '/admin', 
     name: 'AdminDashboard', 
     component: AdminDashboard,
-    meta: { requiresAuth: true, role: 'admin' }
+    meta: { requiresAuth: true, role: 'admin' },
+    children: [
+      { path: 'companies', name: 'AdminCompanies', component: () => import('../views/admin/Companies.vue') },
+      { path: 'students', name: 'AdminStudents', component: () => import('../views/admin/Students.vue') },
+      { path: 'jobs', name: 'AdminJobs', component: () => import('../views/admin/Jobs.vue') }
+    ]
   },
   { 
     path: '/company', 
