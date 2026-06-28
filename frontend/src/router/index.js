@@ -24,7 +24,12 @@ const routes = [
     path: '/company', 
     name: 'CompanyDashboard', 
     component: CompanyDashboard,
-    meta: { requiresAuth: true, role: 'company' }
+    meta: { requiresAuth: true, role: 'company' },
+    children: [
+      { path: 'profile', name: 'CompanyProfile', component: () => import('../views/company/Profile.vue') },
+      { path: 'jobs', name: 'CompanyJobs', component: () => import('../views/company/Jobs.vue') },
+      { path: 'applications', name: 'CompanyApplications', component: () => import('../views/company/Applications.vue') }
+    ]
   },
   { 
     path: '/student', 

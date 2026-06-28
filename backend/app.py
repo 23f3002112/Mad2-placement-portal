@@ -4,6 +4,7 @@ from flask_jwt_extended import JWTManager
 from flask_cors import CORS
 from api.auth import auth_bp
 from api.admin import admin_bp
+from api.company import company_bp
 
 def create_app():
     app = Flask(__name__)
@@ -17,6 +18,7 @@ def create_app():
     
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(admin_bp, url_prefix='/api/admin')
+    app.register_blueprint(company_bp, url_prefix='/api/company')
     
     return app
 
