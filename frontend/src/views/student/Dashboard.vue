@@ -8,6 +8,7 @@
           <router-link to="/student/profile" class="list-group-item list-group-item-action" active-class="active">My Profile</router-link>
           <router-link to="/student/jobs" class="list-group-item list-group-item-action" active-class="active">Browse Jobs</router-link>
           <router-link to="/student/applications" class="list-group-item list-group-item-action" active-class="active">My Applications</router-link>
+          <router-link to="/student/exports" class="list-group-item list-group-item-action" active-class="active">Data Exports</router-link>
         </div>
       </div>
       

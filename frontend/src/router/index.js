@@ -29,7 +29,8 @@ const routes = [
     children: [
       { path: 'profile', name: 'CompanyProfile', component: () => import('../views/company/Profile.vue') },
       { path: 'jobs', name: 'CompanyJobs', component: () => import('../views/company/Jobs.vue') },
-      { path: 'applications', name: 'CompanyApplications', component: () => import('../views/company/Applications.vue') }
+      { path: 'applications', name: 'CompanyApplications', component: () => import('../views/company/Applications.vue') },
+      { path: 'exports', name: 'CompanyExports', component: () => import('../views/company/Exports.vue') }
     ]
   },
   { 
@@ -40,7 +41,8 @@ const routes = [
     children: [
       { path: 'profile', name: 'StudentProfile', component: () => import('../views/student/Profile.vue') },
       { path: 'jobs', name: 'StudentJobs', component: () => import('../views/student/Jobs.vue') },
-      { path: 'applications', name: 'StudentApplications', component: () => import('../views/student/Applications.vue') }
+      { path: 'applications', name: 'StudentApplications', component: () => import('../views/student/Applications.vue') },
+      { path: 'exports', name: 'StudentExports', component: () => import('../views/student/Exports.vue') }
     ]
   }
 ]

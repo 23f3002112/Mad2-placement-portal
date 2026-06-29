@@ -6,6 +6,7 @@ from api.auth import auth_bp
 from api.admin import admin_bp
 from api.company import company_bp
 from api.student import student_bp
+from celery_app import celery
 
 def create_app():
     app = Flask(__name__)
@@ -22,6 +23,13 @@ def create_app():
     app.register_blueprint(company_bp, url_prefix='/api/company')
     app.register_blueprint(student_bp, url_prefix='/api/student')
     
+    celery.conf.update(app.config)
+    class ContextTask(celery.Task):
+        def __call__(self, *args, **kwargs):
+            with app.app_context():
+                return self.run(*args, **kwargs)
+    celery.Task = ContextTask
+
     return app
 
 if __name__ == '__main__':

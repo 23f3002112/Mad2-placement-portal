@@ -190,3 +190,47 @@ def update_application_status(app_id):
         
     db.session.commit()
     return jsonify({"msg": "Application updated successfully"}), 200
+
+from models import ExportJob
+from tasks import export_csv_task
+from flask import send_file
+import os
+
+@company_bp.route('/export', methods=['POST'])
+@jwt_required()
+def trigger_export():
+    company, err_resp, err_code = get_company_or_403()
+    if err_resp: return err_resp, err_code
+    
+    current_user = json.loads(get_jwt_identity())
+    export_job = ExportJob(user_id=current_user['id'], status='Pending')
+    db.session.add(export_job)
+    db.session.commit()
+    
+    export_csv_task.delay(export_job.id, current_user['id'], 'company')
+    
+    return jsonify({"msg": "Export task started", "job_id": export_job.id}), 202
+
+@company_bp.route('/exports', methods=['GET'])
+@jwt_required()
+def get_exports():
+    company, err_resp, err_code = get_company_or_403()
+    if err_resp: return err_resp, err_code
+    
+    current_user = json.loads(get_jwt_identity())
+    jobs = ExportJob.query.filter_by(user_id=current_user['id']).order_by(ExportJob.created_at.desc()).all()
+    result = [{"id": j.id, "status": j.status, "created_at": j.created_at} for j in jobs]
+    return jsonify(result), 200
+
+@company_bp.route('/exports/<int:job_id>/download', methods=['GET'])
+@jwt_required()
+def download_export(job_id):
+    company, err_resp, err_code = get_company_or_403()
+    if err_resp: return err_resp, err_code
+    
+    current_user = json.loads(get_jwt_identity())
+    job = ExportJob.query.filter_by(id=job_id, user_id=current_user['id']).first_or_404()
+    if job.status != 'Completed' or not job.file_path:
+        return jsonify({"msg": "File not ready"}), 400
+        
+    return send_file(os.path.abspath(job.file_path), as_attachment=True)

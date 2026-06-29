@@ -11,7 +11,8 @@
           <router-link to="/company" class="list-group-item list-group-item-action" exact-active-class="active">Overview</router-link>
           <router-link to="/company/profile" class="list-group-item list-group-item-action" active-class="active">Company Profile</router-link>
           <router-link to="/company/jobs" class="list-group-item list-group-item-action" active-class="active">Manage Jobs</router-link>
-          <router-link to="/company/applications" class="list-group-item list-group-item-action" active-class="active">Applications</router-link>
+          <router-link to="/company/applications" class="list-group-item list-group-item-action" active-class="active">Manage Applications</router-link>
+          <router-link to="/company/exports" class="list-group-item list-group-item-action" active-class="active">Data Exports</router-link>
         </div>
       </div>
       
