@@ -2,6 +2,10 @@ from flask import Blueprint, request, jsonify
 from models import db, User, Student, Company, JobPosition, Application
 from flask_jwt_extended import jwt_required, get_jwt_identity
 import json
+from cache import cache
+
+def make_user_cache_key(*args, **kwargs):
+    return request.path + request.query_string.decode('utf-8') + str(get_jwt_identity())
 
 student_bp = Blueprint('student', __name__)
 
@@ -61,6 +65,7 @@ def profile():
 
 @student_bp.route('/jobs', methods=['GET'])
 @jwt_required()
+@cache.cached(timeout=60, make_cache_key=make_user_cache_key)
 def get_jobs():
     student, err_resp, err_code = get_student_or_403()
     if err_resp: return err_resp, err_code
@@ -137,4 +142,5 @@ def manage_applications():
         )
         db.session.add(new_app)
         db.session.commit()
+        cache.clear()
         return jsonify({"msg": "Application submitted successfully"}), 201

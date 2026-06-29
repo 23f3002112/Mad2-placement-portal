@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from models import db, User, Student, Company, JobPosition, Application
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from cache import cache
 
 admin_bp = Blueprint('admin', __name__)
 
@@ -32,6 +33,7 @@ def get_stats():
 
 @admin_bp.route('/companies', methods=['GET'])
 @jwt_required()
+@cache.cached(timeout=300, query_string=True)
 def get_companies():
     if not admin_required():
         return jsonify({"msg": "Unauthorized"}), 403
@@ -67,6 +69,7 @@ def approve_company(company_id):
     company = Company.query.get_or_404(company_id)
     company.is_approved = True
     db.session.commit()
+    cache.clear()
     return jsonify({"msg": "Company approved successfully"}), 200
 
 @admin_bp.route('/companies/<int:company_id>/reject', methods=['POST'])
@@ -81,6 +84,7 @@ def reject_company(company_id):
         db.session.delete(user)
     db.session.delete(company)
     db.session.commit()
+    cache.clear()
     return jsonify({"msg": "Company rejected and removed"}), 200
 
 @admin_bp.route('/companies/<int:company_id>/blacklist', methods=['POST'])
@@ -94,12 +98,14 @@ def blacklist_company(company_id):
     if user:
         user.active = not user.active
         db.session.commit()
+        cache.clear()
         status = "deactivated" if not user.active else "activated"
         return jsonify({"msg": f"Company {status} successfully"}), 200
     return jsonify({"msg": "User not found"}), 404
 
 @admin_bp.route('/students', methods=['GET'])
 @jwt_required()
+@cache.cached(timeout=300, query_string=True)
 def get_students():
     if not admin_required():
         return jsonify({"msg": "Unauthorized"}), 403
@@ -133,12 +139,14 @@ def blacklist_student(student_id):
     if user:
         user.active = not user.active
         db.session.commit()
+        cache.clear()
         status = "deactivated" if not user.active else "activated"
         return jsonify({"msg": f"Student {status} successfully"}), 200
     return jsonify({"msg": "User not found"}), 404
 
 @admin_bp.route('/jobs', methods=['GET'])
 @jwt_required()
+@cache.cached(timeout=300, query_string=True)
 def get_jobs():
     if not admin_required():
         return jsonify({"msg": "Unauthorized"}), 403
@@ -164,6 +172,7 @@ def approve_job(job_id):
     job = JobPosition.query.get_or_404(job_id)
     job.status = 'Approved'
     db.session.commit()
+    cache.clear()
     return jsonify({"msg": "Job approved successfully"}), 200
 
 @admin_bp.route('/jobs/<int:job_id>/reject', methods=['POST'])
@@ -175,6 +184,7 @@ def reject_job(job_id):
     job = JobPosition.query.get_or_404(job_id)
     job.status = 'Rejected'
     db.session.commit()
+    cache.clear()
     return jsonify({"msg": "Job rejected successfully"}), 200
 
 @admin_bp.route('/applications', methods=['GET'])

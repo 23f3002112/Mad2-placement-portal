@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from models import db, User, Student, Company, JobPosition, Application, Placement
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime
+from cache import cache
 
 company_bp = Blueprint('company', __name__)
 
@@ -102,6 +103,7 @@ def manage_jobs():
         )
         db.session.add(job)
         db.session.commit()
+        cache.clear()
         return jsonify({"msg": "Job created and pending admin approval"}), 201
 
 @company_bp.route('/jobs/<int:job_id>/status', methods=['PUT'])
@@ -121,6 +123,7 @@ def update_job_status(job_id):
     if new_status in ['Approved', 'Closed']:
         job.status = new_status
         db.session.commit()
+        cache.clear()
         return jsonify({"msg": "Job status updated successfully"}), 200
     
     return jsonify({"msg": "Invalid status"}), 400

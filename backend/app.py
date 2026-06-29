@@ -7,6 +7,7 @@ from api.admin import admin_bp
 from api.company import company_bp
 from api.student import student_bp
 from celery_app import celery
+from cache import cache
 
 def create_app():
     app = Flask(__name__)
@@ -22,6 +23,12 @@ def create_app():
     app.register_blueprint(admin_bp, url_prefix='/api/admin')
     app.register_blueprint(company_bp, url_prefix='/api/company')
     app.register_blueprint(student_bp, url_prefix='/api/student')
+    
+    app.config['CACHE_TYPE'] = 'RedisCache'
+    app.config['CACHE_REDIS_HOST'] = 'localhost'
+    app.config['CACHE_REDIS_PORT'] = 6379
+    app.config['CACHE_DEFAULT_TIMEOUT'] = 300
+    cache.init_app(app)
     
     celery.conf.update(app.config)
     class ContextTask(celery.Task):
