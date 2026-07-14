@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import Home from '../views/Home.vue'
 import Login from '../views/Login.vue'
 import Register from '../views/Register.vue'
 import AdminDashboard from '../views/admin/Dashboard.vue'
@@ -6,7 +7,7 @@ import CompanyDashboard from '../views/company/Dashboard.vue'
 import StudentDashboard from '../views/student/Dashboard.vue'
 
 const routes = [
-  { path: '/', redirect: '/login' },
+  { path: '/', name: 'Home', component: Home },
   { path: '/login', name: 'Login', component: Login },
   { path: '/register', name: 'Register', component: Register },
   { 
@@ -18,7 +19,8 @@ const routes = [
       { path: 'companies', name: 'AdminCompanies', component: () => import('../views/admin/Companies.vue') },
       { path: 'students', name: 'AdminStudents', component: () => import('../views/admin/Students.vue') },
       { path: 'jobs', name: 'AdminJobs', component: () => import('../views/admin/Jobs.vue') },
-      { path: 'applications', name: 'AdminApplications', component: () => import('../views/admin/Applications.vue') }
+      { path: 'applications', name: 'AdminApplications', component: () => import('../views/admin/Applications.vue') },
+      { path: 'search', name: 'AdminSearch', component: () => import('../views/admin/GlobalSearch.vue') }
     ]
   },
   { 
@@ -30,6 +32,7 @@ const routes = [
       { path: 'profile', name: 'CompanyProfile', component: () => import('../views/company/Profile.vue') },
       { path: 'jobs', name: 'CompanyJobs', component: () => import('../views/company/Jobs.vue') },
       { path: 'applications', name: 'CompanyApplications', component: () => import('../views/company/Applications.vue') },
+      { path: 'messages', name: 'CompanyMessages', component: () => import('../views/company/Messages.vue') },
       { path: 'exports', name: 'CompanyExports', component: () => import('../views/company/Exports.vue') }
     ]
   },
@@ -42,6 +45,7 @@ const routes = [
       { path: 'profile', name: 'StudentProfile', component: () => import('../views/student/Profile.vue') },
       { path: 'jobs', name: 'StudentJobs', component: () => import('../views/student/Jobs.vue') },
       { path: 'applications', name: 'StudentApplications', component: () => import('../views/student/Applications.vue') },
+      { path: 'messages', name: 'StudentMessages', component: () => import('../views/student/Messages.vue') },
       { path: 'exports', name: 'StudentExports', component: () => import('../views/student/Exports.vue') }
     ]
   }

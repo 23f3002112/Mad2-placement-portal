@@ -1,8 +1,12 @@
-from flask import Blueprint, request, jsonify
-from models import db, User, Student, Company, JobPosition, Application
+from flask import Blueprint, request, jsonify, send_file
+from models import db, User, Student, Company, JobPosition, Application, ExportJob
 from flask_jwt_extended import jwt_required, get_jwt_identity
 import json
+import os
 from cache import cache
+from tasks import export_csv_task
+from werkzeug.utils import secure_filename
+from tasks import export_csv_task
 
 def make_user_cache_key(*args, **kwargs):
     return request.path + request.query_string.decode('utf-8') + str(get_jwt_identity())
@@ -51,17 +55,59 @@ def profile():
             "education": student.education,
             "skills": student.skills,
             "resume_url": student.resume_url,
-            "experience": student.experience
+            "experience": student.experience,
+            "photo_url": student.photo_url,
+            "location": student.location,
+            "linkedin": student.linkedin,
+            "github": student.github
         }), 200
         
     if request.method == 'PUT':
         data = request.get_json()
+        student.name = data.get('name', student.name)
         student.education = data.get('education', student.education)
         student.skills = data.get('skills', student.skills)
         student.resume_url = data.get('resume_url', student.resume_url)
         student.experience = data.get('experience', student.experience)
+        student.photo_url = data.get('photo_url', student.photo_url)
+        student.location = data.get('location', student.location)
+        student.linkedin = data.get('linkedin', student.linkedin)
+        student.github = data.get('github', student.github)
         db.session.commit()
         return jsonify({"msg": "Profile updated successfully"}), 200
+
+@student_bp.route('/upload_resume', methods=['POST'])
+@jwt_required()
+def upload_resume():
+    student, err_resp, err_code = get_student_or_403()
+    if err_resp: return err_resp, err_code
+    
+    if 'file' not in request.files:
+        return jsonify({"msg": "No file part"}), 400
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"msg": "No selected file"}), 400
+        
+    filename = secure_filename(file.filename)
+    upload_folder = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', 'uploads')
+    os.makedirs(upload_folder, exist_ok=True)
+    file_path = os.path.join(upload_folder, f"student_{student.id}_{filename}")
+    file.save(file_path)
+    
+    # Store absolute URL (assuming backend is on localhost:5000)
+    student.resume_url = f"http://127.0.0.1:5000/static/uploads/student_{student.id}_{filename}"
+    db.session.commit()
+    
+    return jsonify({"resume_url": student.resume_url}), 200
+
+@student_bp.route('/download_resume/<path:filename>', methods=['GET'])
+def download_resume_file(filename):
+    upload_folder = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', 'uploads')
+    file_path = os.path.join(upload_folder, filename)
+    if os.path.exists(file_path):
+        from flask import send_file
+        return send_file(file_path, as_attachment=True)
+    return jsonify({"msg": "File not found"}), 404
 
 @student_bp.route('/jobs', methods=['GET'])
 @jwt_required()
@@ -119,7 +165,10 @@ def manage_applications():
                 "status": app.status,
                 "feedback": app.feedback,
                 "interview_date": app.interview_date.isoformat() if app.interview_date else None,
-                "date_applied": app.date_applied
+                "date_applied": app.date_applied,
+                "salary": job.salary,
+                "skills_required": job.skills_required,
+                "description": job.description
             })
         return jsonify(result), 200
         
@@ -144,3 +193,133 @@ def manage_applications():
         db.session.commit()
         cache.clear()
         return jsonify({"msg": "Application submitted successfully"}), 201
+
+@student_bp.route('/export', methods=['POST'])
+@jwt_required()
+def trigger_export():
+    student, err_resp, err_code = get_student_or_403()
+    if err_resp: return err_resp, err_code
+    
+    current_user = json.loads(get_jwt_identity())
+    export_job = ExportJob(user_id=current_user['id'], status='Pending')
+    db.session.add(export_job)
+    db.session.commit()
+    
+    export_csv_task(export_job.id, current_user['id'], 'student')
+    
+    return jsonify({"msg": "Export task started", "job_id": export_job.id}), 202
+
+@student_bp.route('/exports', methods=['GET'])
+@jwt_required()
+def get_exports():
+    student, err_resp, err_code = get_student_or_403()
+    if err_resp: return err_resp, err_code
+    
+    current_user = json.loads(get_jwt_identity())
+    jobs = ExportJob.query.filter_by(user_id=current_user['id']).order_by(ExportJob.created_at.desc()).all()
+    result = [{"id": j.id, "status": j.status, "created_at": j.created_at} for j in jobs]
+    return jsonify(result), 200
+
+@student_bp.route('/exports/<int:job_id>/download', methods=['GET'])
+@jwt_required()
+def download_export(job_id):
+    student, err_resp, err_code = get_student_or_403()
+    if err_resp: return err_resp, err_code
+    
+    current_user = json.loads(get_jwt_identity())
+    job = ExportJob.query.filter_by(id=job_id, user_id=current_user['id']).first_or_404()
+    if job.status != 'Completed' or not job.file_path:
+        return jsonify({"msg": "File not ready"}), 400
+        
+    return send_file(os.path.abspath(job.file_path), as_attachment=True)
+
+from models import Message
+
+@student_bp.route('/messages/conversations', methods=['GET'])
+@jwt_required()
+def get_conversations():
+    student, err_resp, err_code = get_student_or_403()
+    if err_resp: return err_resp, err_code
+    
+    applications = Application.query.filter_by(student_id=student.id).all()
+    
+    result = []
+    for app in applications:
+        job = JobPosition.query.get(app.job_id)
+        company_user_id = job.company.user_id
+        
+        has_msg = Message.query.filter_by(application_id=app.id).first()
+        if not has_msg:
+            continue
+            
+        last_msg = Message.query.filter_by(application_id=app.id).order_by(Message.timestamp.desc()).first()
+        
+        result.append({
+            "application_id": app.id,
+            "company_name": job.company.name,
+            "company_user_id": company_user_id,
+            "job_title": job.title,
+            "last_message": last_msg.content if last_msg else None,
+            "last_timestamp": last_msg.timestamp.isoformat() if last_msg else None,
+            "status": app.status
+        })
+    
+    result.sort(key=lambda x: x['last_timestamp'] or '', reverse=True)
+    return jsonify(result), 200
+
+@student_bp.route('/messages/<int:application_id>', methods=['GET', 'POST'])
+@jwt_required()
+def handle_messages(application_id):
+    student, err_resp, err_code = get_student_or_403()
+    if err_resp: return err_resp, err_code
+    
+    app = Application.query.get_or_404(application_id)
+    if app.student_id != student.id:
+        return jsonify({"msg": "Unauthorized"}), 403
+        
+    job = JobPosition.query.get(app.job_id)
+    company_user_id = job.company.user_id
+    
+    current_user = json.loads(get_jwt_identity())
+    
+    has_msg = Message.query.filter_by(application_id=application_id).first()
+    
+    if request.method == 'GET':
+        if not has_msg:
+            return jsonify([]), 200
+            
+        messages = Message.query.filter_by(application_id=application_id).order_by(Message.timestamp.asc()).all()
+        result = []
+        for m in messages:
+            result.append({
+                "id": m.id,
+                "sender_id": m.sender_id,
+                "content": m.content,
+                "timestamp": m.timestamp.isoformat()
+            })
+        return jsonify(result), 200
+        
+    if request.method == 'POST':
+        if not has_msg:
+            return jsonify({"msg": "You cannot start a conversation. The company must message first."}), 403
+            
+        data = request.get_json()
+        content = data.get('content')
+        if not content:
+            return jsonify({"msg": "Content is required"}), 400
+            
+        new_msg = Message(
+            sender_id=current_user['id'],
+            receiver_id=company_user_id,
+            application_id=application_id,
+            content=content
+        )
+        db.session.add(new_msg)
+        db.session.commit()
+        
+        return jsonify({
+            "id": new_msg.id,
+            "sender_id": new_msg.sender_id,
+            "content": new_msg.content,
+            "timestamp": new_msg.timestamp.isoformat()
+        }), 201

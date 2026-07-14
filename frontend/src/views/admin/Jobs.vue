@@ -26,7 +26,8 @@
             </td>
             <td>
               <button v-if="job.status === 'Pending'" @click="approveJob(job.id)" class="btn btn-sm btn-success me-1">Approve</button>
-              <button v-if="job.status === 'Pending'" @click="rejectJob(job.id)" class="btn btn-sm btn-danger">Reject</button>
+              <button v-if="job.status === 'Pending'" @click="rejectJob(job.id)" class="btn btn-sm btn-warning me-1">Reject</button>
+              <button @click="deleteJob(job.id)" class="btn btn-sm btn-danger">Delete</button>
             </td>
           </tr>
         </tbody>
@@ -76,6 +77,16 @@ export default {
       if (confirm('Are you sure you want to reject this job?')) {
         try {
           await api.post(`/admin/jobs/${id}/reject`);
+          this.fetchJobs();
+        } catch (error) {
+          console.error(error);
+        }
+      }
+    },
+    async deleteJob(id) {
+      if (confirm('Are you sure you want to completely delete this placement drive? All associated applications will also be deleted.')) {
+        try {
+          await api.delete(`/admin/jobs/${id}`);
           this.fetchJobs();
         } catch (error) {
           console.error(error);

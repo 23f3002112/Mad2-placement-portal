@@ -32,10 +32,11 @@
             </td>
             <td>
               <button v-if="!company.is_approved" @click="approveCompany(company.id)" class="btn btn-sm btn-success me-1">Approve</button>
-              <button v-if="!company.is_approved" @click="rejectCompany(company.id)" class="btn btn-sm btn-danger">Reject</button>
-              <button v-if="company.is_approved" @click="blacklistCompany(company.id)" class="btn btn-sm" :class="company.is_active ? 'btn-danger' : 'btn-info'">
+              <button v-if="!company.is_approved" @click="rejectCompany(company.id)" class="btn btn-sm btn-warning me-1">Reject</button>
+              <button v-if="company.is_approved" @click="blacklistCompany(company.id)" class="btn btn-sm me-1" :class="company.is_active ? 'btn-secondary' : 'btn-info'">
                 {{ company.is_active ? 'Blacklist' : 'Activate' }}
               </button>
+              <button @click="deleteCompany(company.id)" class="btn btn-sm btn-danger">Delete</button>
             </td>
           </tr>
         </tbody>
@@ -55,7 +56,16 @@ export default {
     }
   },
   mounted() {
+    if (this.$route.query.search) {
+      this.search = this.$route.query.search;
+    }
     this.fetchCompanies();
+  },
+  watch: {
+    '$route.query.search': function(newVal) {
+      this.search = newVal || '';
+      this.fetchCompanies();
+    }
   },
   methods: {
     async fetchCompanies() {
@@ -90,6 +100,16 @@ export default {
       if (confirm('Are you sure you want to change the status of this company?')) {
         try {
           await api.post(`/admin/companies/${id}/blacklist`);
+          this.fetchCompanies();
+        } catch (error) {
+          console.error(error);
+        }
+      }
+    },
+    async deleteCompany(id) {
+      if (confirm('Are you sure you want to completely delete this company? All their jobs and applications will also be removed.')) {
+        try {
+          await api.delete(`/admin/companies/${id}`);
           this.fetchCompanies();
         } catch (error) {
           console.error(error);

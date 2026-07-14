@@ -68,6 +68,32 @@ def approve_company(company_id):
         
     company = Company.query.get_or_404(company_id)
     company.is_approved = True
+    
+    user = User.query.get(company.user_id)
+    if user:
+        from mail import send_email
+        from models import Notification
+        
+        subject = "Your Company Profile is Approved!"
+        body = f"""
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #eaeaea; border-radius: 12px; background-color: #ffffff;">
+            <div style="text-align: center; margin-bottom: 30px;">
+                <h1 style="color: #00008b; margin: 0; font-size: 28px;">Job<span style="color: #ff3e6c;">Finder</span></h1>
+            </div>
+            <h2 style="color: #28a745; text-align: center; margin-bottom: 20px;">Congratulations, {company.name}! 🎉</h2>
+            <p style="font-size: 16px; color: #4a4a4a; line-height: 1.6;">Your company registration on JobFinder has been successfully approved by our administration team.</p>
+            <p style="font-size: 16px; color: #4a4a4a; line-height: 1.6;">You can now log in to your company dashboard to start posting placement drives and discovering top student talent.</p>
+            <div style="text-align: center; margin: 40px 0;">
+                <a href="http://localhost:5173/login" style="background-color: #00008b; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 16px; display: inline-block;">Go to Dashboard</a>
+            </div>
+            <p style="font-size: 14px; color: #888888; border-top: 1px solid #f0f0f0; padding-top: 20px; text-align: center;">Welcome aboard,<br/><strong>The JobFinder Team</strong></p>
+        </div>
+        """
+        send_email(user.email, subject, body, content="html")
+        
+        notif = Notification(user_id=user.id, title=subject, message="Your company profile has been officially approved. You can now post jobs.")
+        db.session.add(notif)
+        
     db.session.commit()
     cache.clear()
     return jsonify({"msg": "Company approved successfully"}), 200
@@ -240,3 +266,162 @@ def get_student_details(student_id):
         "email": user.email if user else "",
         "applications": apps_data
     }), 200
+
+from models import Notification, Message, Placement
+
+@admin_bp.route('/companies/<int:company_id>', methods=['DELETE'])
+@jwt_required()
+def delete_company_endpoint(company_id):
+    if not admin_required():
+        return jsonify({"msg": "Unauthorized"}), 403
+        
+    company = Company.query.get_or_404(company_id)
+    user = User.query.get(company.user_id)
+    
+    jobs = JobPosition.query.filter_by(company_id=company.id).all()
+    for job in jobs:
+        apps = Application.query.filter_by(job_id=job.id).all()
+        for app in apps:
+            Message.query.filter_by(application_id=app.id).delete()
+            db.session.delete(app)
+        Placement.query.filter_by(job_id=job.id).delete()
+        db.session.delete(job)
+        
+    Placement.query.filter_by(company_id=company.id).delete()
+    
+    db.session.delete(company)
+    if user:
+        db.session.delete(user)
+        
+    db.session.commit()
+    cache.clear()
+    return jsonify({"msg": "Company and all associated data deleted successfully"}), 200
+
+@admin_bp.route('/students/<int:student_id>', methods=['DELETE'])
+@jwt_required()
+def delete_student_endpoint(student_id):
+    if not admin_required():
+        return jsonify({"msg": "Unauthorized"}), 403
+        
+    student = Student.query.get_or_404(student_id)
+    user = User.query.get(student.user_id)
+    
+    apps = Application.query.filter_by(student_id=student.id).all()
+    for app in apps:
+        Message.query.filter_by(application_id=app.id).delete()
+        db.session.delete(app)
+        
+    Placement.query.filter_by(student_id=student.id).delete()
+    
+    db.session.delete(student)
+    if user:
+        db.session.delete(user)
+        
+    db.session.commit()
+    cache.clear()
+    return jsonify({"msg": "Student and all associated data deleted successfully"}), 200
+
+@admin_bp.route('/jobs/<int:job_id>', methods=['DELETE'])
+@jwt_required()
+def delete_job_endpoint(job_id):
+    if not admin_required():
+        return jsonify({"msg": "Unauthorized"}), 403
+        
+    job = JobPosition.query.get_or_404(job_id)
+    
+    apps = Application.query.filter_by(job_id=job.id).all()
+    for app in apps:
+        Message.query.filter_by(application_id=app.id).delete()
+        db.session.delete(app)
+        
+    Placement.query.filter_by(job_id=job.id).delete()
+    
+    db.session.delete(job)
+    db.session.commit()
+    cache.clear()
+    return jsonify({"msg": "Job deleted successfully"}), 200
+
+@admin_bp.route('/search', methods=['GET'])
+@jwt_required()
+def global_search():
+    if not admin_required():
+        return jsonify({"msg": "Unauthorized"}), 403
+        
+    query_str = request.args.get('q', '').lower()
+    if not query_str:
+        return jsonify({"companies": [], "students": [], "jobs": []}), 200
+        
+    # Search Companies
+    companies_query = Company.query.filter(db.or_(
+        db.func.lower(Company.name).contains(query_str),
+        db.func.lower(Company.industry).contains(query_str)
+    )).all()
+    
+    companies_result = []
+    for c in companies_query:
+        user = User.query.get(c.user_id)
+        companies_result.append({
+            "id": c.id, "name": c.name, "industry": c.industry,
+            "location": c.location, "is_approved": c.is_approved,
+            "is_active": user.active if user else False
+        })
+        
+    # Search Students
+    students_query = Student.query.filter(db.or_(
+        db.func.lower(Student.name).contains(query_str),
+        db.func.lower(Student.skills).contains(query_str)
+    )).all()
+    
+    students_result = []
+    for s in students_query:
+        user = User.query.get(s.user_id)
+        students_result.append({
+            "id": s.id, "name": s.name, "education": s.education,
+            "email": user.email if user else "",
+            "is_active": user.active if user else False
+        })
+        
+    # Search Jobs
+    jobs_query = JobPosition.query.join(Company).filter(db.or_(
+        db.func.lower(JobPosition.title).contains(query_str),
+        db.func.lower(JobPosition.skills_required).contains(query_str),
+        db.func.lower(Company.name).contains(query_str)
+    )).all()
+    
+    jobs_result = []
+    for j in jobs_query:
+        jobs_result.append({
+            "id": j.id, "title": j.title, 
+            "company_name": j.company.name if j.company else "Unknown",
+            "status": j.status, "created_at": j.created_at
+        })
+        
+    return jsonify({
+        "companies": companies_result,
+        "students": students_result,
+        "jobs": jobs_result
+    }), 200
+
+@admin_bp.route('/notifications/send', methods=['POST'])
+@jwt_required()
+def send_notification():
+    if not admin_required():
+        return jsonify({"msg": "Unauthorized"}), 403
+        
+    data = request.get_json()
+    user_id = data.get('user_id')
+    title = data.get('title')
+    message = data.get('message')
+    
+    if not user_id or not title or not message:
+        return jsonify({"msg": "Missing fields: user_id, title, message"}), 400
+        
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"msg": "User not found"}), 404
+        
+    notif = Notification(user_id=user.id, title=title, message=message)
+    db.session.add(notif)
+    db.session.commit()
+    
+    return jsonify({"msg": "Notification sent successfully"}), 200

@@ -87,6 +87,7 @@ export default {
   data() {
     return {
       jobs: [],
+      search: '',
       showCreateModal: false,
       newJob: {
         title: '',
@@ -97,12 +98,21 @@ export default {
     }
   },
   mounted() {
+    if (this.$route.query.search) {
+      this.search = this.$route.query.search;
+    }
     this.fetchJobs();
+  },
+  watch: {
+    '$route.query.search': function(newVal) {
+      this.search = newVal || '';
+      this.fetchJobs();
+    }
   },
   methods: {
     async fetchJobs() {
       try {
-        const response = await api.get('/company/jobs');
+        const response = await api.get(`/company/jobs?search=${this.search}`);
         this.jobs = response.data;
       } catch (error) {
         console.error('Error fetching jobs:', error);

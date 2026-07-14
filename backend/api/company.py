@@ -72,7 +72,18 @@ def manage_jobs():
     if err_resp: return err_resp, err_code
     
     if request.method == 'GET':
-        jobs = JobPosition.query.filter_by(company_id=company.id).all()
+        search = request.args.get('search', '').lower()
+        query = JobPosition.query.filter_by(company_id=company.id)
+        
+        if search:
+            query = query.filter(
+                db.or_(
+                    db.func.lower(JobPosition.title).contains(search),
+                    db.func.lower(JobPosition.skills_required).contains(search)
+                )
+            )
+            
+        jobs = query.all()
         result = []
         for j in jobs:
             result.append({
@@ -210,7 +221,7 @@ def trigger_export():
     db.session.add(export_job)
     db.session.commit()
     
-    export_csv_task.delay(export_job.id, current_user['id'], 'company')
+    export_csv_task(export_job.id, current_user['id'], 'company')
     
     return jsonify({"msg": "Export task started", "job_id": export_job.id}), 202
 
@@ -237,3 +248,84 @@ def download_export(job_id):
         return jsonify({"msg": "File not ready"}), 400
         
     return send_file(os.path.abspath(job.file_path), as_attachment=True)
+
+from models import Message
+
+@company_bp.route('/messages/conversations', methods=['GET'])
+@jwt_required()
+def get_conversations():
+    company, err_resp, err_code = get_company_or_403()
+    if err_resp: return err_resp, err_code
+    
+    job_ids = [j.id for j in JobPosition.query.filter_by(company_id=company.id).all()]
+    applications = Application.query.filter(Application.job_id.in_(job_ids), Application.status.in_(['Shortlisted', 'Selected', 'Placed', 'Offer'])).all()
+    
+    result = []
+    for app in applications:
+        student = Student.query.get(app.student_id)
+        job = JobPosition.query.get(app.job_id)
+        last_msg = Message.query.filter_by(application_id=app.id).order_by(Message.timestamp.desc()).first()
+        
+        result.append({
+            "application_id": app.id,
+            "student_name": student.name,
+            "student_id": student.user_id,
+            "job_title": job.title,
+            "last_message": last_msg.content if last_msg else None,
+            "last_timestamp": last_msg.timestamp.isoformat() if last_msg else None,
+            "status": app.status
+        })
+    
+    result.sort(key=lambda x: x['last_timestamp'] or '', reverse=True)
+    return jsonify(result), 200
+
+@company_bp.route('/messages/<int:application_id>', methods=['GET', 'POST'])
+@jwt_required()
+def handle_messages(application_id):
+    company, err_resp, err_code = get_company_or_403()
+    if err_resp: return err_resp, err_code
+    
+    app = Application.query.get_or_404(application_id)
+    job = JobPosition.query.get(app.job_id)
+    if job.company_id != company.id:
+        return jsonify({"msg": "Unauthorized"}), 403
+        
+    if app.status not in ['Shortlisted', 'Selected', 'Placed', 'Offer', 'Interview']:
+        return jsonify({"msg": "Cannot message candidate unless shortlisted"}), 403
+        
+    current_user = json.loads(get_jwt_identity())
+    student = Student.query.get(app.student_id)
+    
+    if request.method == 'GET':
+        messages = Message.query.filter_by(application_id=application_id).order_by(Message.timestamp.asc()).all()
+        result = []
+        for m in messages:
+            result.append({
+                "id": m.id,
+                "sender_id": m.sender_id,
+                "content": m.content,
+                "timestamp": m.timestamp.isoformat()
+            })
+        return jsonify(result), 200
+        
+    if request.method == 'POST':
+        data = request.get_json()
+        content = data.get('content')
+        if not content:
+            return jsonify({"msg": "Content is required"}), 400
+            
+        new_msg = Message(
+            sender_id=current_user['id'],
+            receiver_id=student.user_id,
+            application_id=application_id,
+            content=content
+        )
+        db.session.add(new_msg)
+        db.session.commit()
+        
+        return jsonify({
+            "id": new_msg.id,
+            "sender_id": new_msg.sender_id,
+            "content": new_msg.content,
+            "timestamp": new_msg.timestamp.isoformat()
+        }), 201

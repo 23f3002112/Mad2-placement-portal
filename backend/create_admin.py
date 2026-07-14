@@ -14,7 +14,7 @@ with app.app_context():
     
     if not admin_exists:
         print(f"Creating Admin user...")
-        hashed_pw = generate_password_hash('admin123')
+        hashed_pw = generate_password_hash('111')
         admin_user = User(email=admin_email, password=hashed_pw, role='admin', active=True)
         db.session.add(admin_user)
         db.session.commit()

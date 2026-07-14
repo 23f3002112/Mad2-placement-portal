@@ -29,6 +29,10 @@ class Student(db.Model):
     skills = db.Column(db.String(200))
     resume_url = db.Column(db.String(255))
     experience = db.Column(db.Text)
+    photo_url = db.Column(db.String(255))
+    location = db.Column(db.String(100))
+    linkedin = db.Column(db.String(255))
+    github = db.Column(db.String(255))
     
     user = db.relationship('User', backref=db.backref('student_profile', uselist=False))
 
@@ -77,3 +81,25 @@ class ExportJob(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     user = db.relationship('User', backref=db.backref('export_jobs', lazy=True))
+
+class Notification(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    title = db.Column(db.String(150), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    is_read = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    user = db.relationship('User', backref=db.backref('notifications', lazy=True, order_by='Notification.created_at.desc()'))
+
+class Message(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    receiver_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    application_id = db.Column(db.Integer, db.ForeignKey('application.id'), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    sender = db.relationship('User', foreign_keys=[sender_id])
+    receiver = db.relationship('User', foreign_keys=[receiver_id])
+    application = db.relationship('Application')

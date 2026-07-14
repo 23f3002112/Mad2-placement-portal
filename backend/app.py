@@ -24,9 +24,10 @@ def create_app():
     app.register_blueprint(company_bp, url_prefix='/api/company')
     app.register_blueprint(student_bp, url_prefix='/api/student')
     
-    app.config['CACHE_TYPE'] = 'RedisCache'
-    app.config['CACHE_REDIS_HOST'] = 'localhost'
-    app.config['CACHE_REDIS_PORT'] = 6379
+    from api.notification import notification_bp
+    app.register_blueprint(notification_bp, url_prefix='/api/notifications')
+    
+    app.config['CACHE_TYPE'] = 'SimpleCache'
     app.config['CACHE_DEFAULT_TIMEOUT'] = 300
     cache.init_app(app)
     

@@ -1,7 +1,7 @@
 <template>
-  <div class="mt-4">
+  <div>
     <div class="d-flex justify-content-between align-items-center mb-4">
-      <h2>Data Exports</h2>
+      <h3 class="fw-bold mb-0">Data Exports</h3>
       <button class="btn btn-primary" @click="triggerExport" :disabled="isExporting">
         <span v-if="isExporting" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
         {{ isExporting ? 'Starting Export...' : 'Export Application History (CSV)' }}

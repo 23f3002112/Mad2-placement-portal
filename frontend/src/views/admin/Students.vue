@@ -28,9 +28,10 @@
               </span>
             </td>
             <td>
-              <button @click="blacklistStudent(student.id)" class="btn btn-sm" :class="student.is_active ? 'btn-danger' : 'btn-info'">
+              <button @click="blacklistStudent(student.id)" class="btn btn-sm me-1" :class="student.is_active ? 'btn-secondary' : 'btn-info'">
                 {{ student.is_active ? 'Blacklist' : 'Activate' }}
               </button>
+              <button @click="deleteStudent(student.id)" class="btn btn-sm btn-danger">Delete</button>
             </td>
           </tr>
         </tbody>
@@ -65,6 +66,16 @@ export default {
       if (confirm('Are you sure you want to change the status of this student?')) {
         try {
           await api.post(`/admin/students/${id}/blacklist`);
+          this.fetchStudents();
+        } catch (error) {
+          console.error(error);
+        }
+      }
+    },
+    async deleteStudent(id) {
+      if (confirm('Are you sure you want to completely delete this student? All their applications will also be removed.')) {
+        try {
+          await api.delete(`/admin/students/${id}`);
           this.fetchStudents();
         } catch (error) {
           console.error(error);
