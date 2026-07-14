@@ -54,7 +54,11 @@ def profile():
             "name": company.name,
             "industry": company.industry,
             "location": company.location,
-            "description": company.description
+            "description": company.description,
+            "website": company.website,
+            "employee_count": company.employee_count,
+            "founded_year": company.founded_year,
+            "contact_email": company.contact_email
         }), 200
         
     if request.method == 'PUT':
@@ -62,6 +66,10 @@ def profile():
         company.industry = data.get('industry', company.industry)
         company.location = data.get('location', company.location)
         company.description = data.get('description', company.description)
+        company.website = data.get('website', company.website)
+        company.employee_count = data.get('employee_count', company.employee_count)
+        company.founded_year = data.get('founded_year', company.founded_year)
+        company.contact_email = data.get('contact_email', company.contact_email)
         db.session.commit()
         return jsonify({"msg": "Profile updated successfully"}), 200
 
@@ -93,6 +101,7 @@ def manage_jobs():
                 "salary": j.salary,
                 "skills_required": j.skills_required,
                 "status": j.status,
+                "deadline": j.deadline.isoformat() if j.deadline else None,
                 "created_at": j.created_at
             })
         return jsonify(result), 200
@@ -103,19 +112,85 @@ def manage_jobs():
         description = data.get('description')
         salary = data.get('salary')
         skills_required = data.get('skills_required')
+        deadline_str = data.get('deadline')
         
-        job = JobPosition(
-            company_id=company.id,
-            title=title,
-            description=description,
-            salary=salary,
-            skills_required=skills_required,
-            status='Pending'
-        )
-        db.session.add(job)
+        deadline = None
+        if deadline_str:
+            deadline = datetime.fromisoformat(deadline_str.replace('Z', '+00:00'))
+            
+        try:
+            job = JobPosition(
+                company_id=company.id,
+                title=title,
+                description=description,
+                salary=salary,
+                skills_required=skills_required,
+                deadline=deadline,
+                status='Pending'
+            )
+            db.session.add(job)
+            db.session.commit()
+            cache.clear()
+            
+            from models import Notification
+            admin = User.query.filter_by(role='admin').first()
+            if admin:
+                notif = Notification(
+                    user_id=admin.id,
+                    title="New Job Posted",
+                    message=f"Company {company.name} has posted a new job: {title}. It is pending your approval."
+                )
+                db.session.add(notif)
+                db.session.commit()
+                
+            return jsonify({"msg": "Job created and pending admin approval"}), 201
+        except Exception as e:
+            import traceback
+            return jsonify({"msg": str(e), "trace": traceback.format_exc()}), 500
+
+from mail import send_email
+
+@company_bp.route('/jobs/<int:job_id>', methods=['PUT', 'DELETE'])
+@jwt_required()
+def handle_single_job(job_id):
+    company, err_resp, err_code = get_company_or_403()
+    if err_resp: return err_resp, err_code
+    
+    job = JobPosition.query.filter_by(id=job_id, company_id=company.id).first_or_404()
+    
+    if request.method == 'DELETE':
+        Application.query.filter_by(job_id=job.id).delete()
+        db.session.delete(job)
         db.session.commit()
         cache.clear()
-        return jsonify({"msg": "Job created and pending admin approval"}), 201
+        return jsonify({"msg": "Job deleted successfully"}), 200
+        
+    if request.method == 'PUT':
+        data = request.get_json()
+        
+        job.title = data.get('title', job.title)
+        job.description = data.get('description', job.description)
+        job.salary = data.get('salary', job.salary)
+        job.skills_required = data.get('skills_required', job.skills_required)
+        
+        deadline_str = data.get('deadline')
+        if deadline_str:
+            job.deadline = datetime.fromisoformat(deadline_str.replace('Z', '+00:00'))
+            
+        db.session.commit()
+        cache.clear()
+        
+        # Send email to all students who applied
+        applications = Application.query.filter_by(job_id=job.id).all()
+        for app in applications:
+            student = Student.query.get(app.student_id)
+            user = User.query.get(student.user_id)
+            if user:
+                subject = f"Update on your application for {job.title}"
+                body = f"Hello {student.name},\n\nThe company {company.name} has recently updated the job details for '{job.title}'.\nPlease check the portal for any new requirements, deadlines, or changes.\n\nBest,\nPlacement Portal Team"
+                send_email(user.email, subject, body)
+                
+        return jsonify({"msg": "Job updated successfully and applicants notified"}), 200
 
 @company_bp.route('/jobs/<int:job_id>/status', methods=['PUT'])
 @jwt_required()
@@ -163,6 +238,8 @@ def get_job_applications(job_id):
             "status": app.status,
             "feedback": app.feedback,
             "interview_date": app.interview_date.isoformat() if app.interview_date else None,
+            "interview_type": app.interview_type,
+            "interview_location_or_link": app.interview_location_or_link,
             "date_applied": app.date_applied
         })
     return jsonify(result), 200
@@ -183,6 +260,8 @@ def update_application_status(app_id):
     new_status = data.get('status')
     feedback = data.get('feedback')
     interview_date = data.get('interview_date')
+    interview_type = data.get('interview_type')
+    interview_location_or_link = data.get('interview_location_or_link')
     
     if new_status:
         application.status = new_status
@@ -201,6 +280,125 @@ def update_application_status(app_id):
         application.feedback = feedback
     if interview_date:
         application.interview_date = datetime.fromisoformat(interview_date.replace('Z', '+00:00'))
+    if interview_type:
+        application.interview_type = interview_type
+    if interview_location_or_link:
+        application.interview_location_or_link = interview_location_or_link
+        
+    if new_status == 'Interview' and interview_date:
+        student = Student.query.get(application.student_id)
+        user = User.query.get(student.user_id)
+        if user and user.email:
+            from mail import send_email
+            
+            interview_date_obj = datetime.fromisoformat(interview_date.replace('Z', '+00:00'))
+            date_str = interview_date_obj.strftime("%A, %B %d, %Y at %I:%M %p")
+            
+            loc_label = "Google Meet Link" if interview_type == 'Online' else "Location"
+            
+            subject = f"Interview Invitation for {job.title} at {company.name}"
+            body = f"""
+            <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eee; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                <div style="background-color: #00008b; padding: 30px; text-align: center;">
+                    <h1 style="color: white; margin: 0; font-size: 24px;">Interview Invitation</h1>
+                </div>
+                <div style="padding: 30px; background-color: #ffffff;">
+                    <p style="font-size: 16px; color: #333; margin-bottom: 20px;">Dear <strong>{student.name}</strong>,</p>
+                    
+                    <p style="font-size: 16px; color: #555; line-height: 1.6;">
+                        Congratulations! We are excited to invite you to an interview for the <strong>{job.title}</strong> position at <strong>{company.name}</strong>.
+                    </p>
+                    
+                    <div style="background-color: #f8f9fa; border-left: 4px solid #00008b; padding: 20px; margin: 25px 0; border-radius: 4px;">
+                        <h3 style="margin-top: 0; color: #00008b; font-size: 18px;">Interview Details</h3>
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <tr>
+                                <td style="padding: 8px 0; color: #666; width: 30%;"><strong>Date & Time:</strong></td>
+                                <td style="padding: 8px 0; color: #333;">{date_str}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px 0; color: #666;"><strong>Type:</strong></td>
+                                <td style="padding: 8px 0; color: #333;">{interview_type or 'Online'}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px 0; color: #666;"><strong>{loc_label}:</strong></td>
+                                <td style="padding: 8px 0; color: #333;">{interview_location_or_link or 'TBD'}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    
+                    <p style="font-size: 16px; color: #555; line-height: 1.6;">
+                        Please make sure to be on time and prepared. If you have any questions, you can reply directly to the company through the placement portal messaging system.
+                    </p>
+                    
+                    <p style="font-size: 16px; color: #555; line-height: 1.6; margin-top: 30px;">
+                        Best regards,<br>
+                        <strong>{company.name} Team</strong>
+                    </p>
+                </div>
+                <div style="background-color: #f4f6f9; padding: 15px; text-align: center; border-top: 1px solid #eee;">
+                    <p style="font-size: 12px; color: #999; margin: 0;">Powered by JobFinder Placement Portal</p>
+                </div>
+            </div>
+            """
+            send_email(user.email, subject, body)
+            
+    if new_status == 'Offer':
+        joining_date = data.get('joining_date')
+        student = Student.query.get(application.student_id)
+        user = User.query.get(student.user_id)
+        if user and user.email and joining_date:
+            from mail import send_email
+            
+            join_date_obj = datetime.strptime(joining_date, "%Y-%m-%d")
+            join_date_str = join_date_obj.strftime("%A, %B %d, %Y")
+            
+            subject = f"Job Offer: {job.title} at {company.name}"
+            body = f"""
+            <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eee; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                <div style="background-color: #00008b; padding: 30px; text-align: center;">
+                    <h1 style="color: white; margin: 0; font-size: 24px;">Offer Letter</h1>
+                </div>
+                <div style="padding: 30px; background-color: #ffffff;">
+                    <p style="font-size: 16px; color: #333; margin-bottom: 20px;">Dear <strong>{student.name}</strong>,</p>
+                    
+                    <p style="font-size: 16px; color: #555; line-height: 1.6;">
+                        Congratulations! After a successful interview process, we are thrilled to offer you the position of <strong>{job.title}</strong> at <strong>{company.name}</strong>.
+                    </p>
+                    
+                    <p style="font-size: 16px; color: #555; line-height: 1.6;">
+                        We were very impressed with your background and skills, and we believe you will be a fantastic addition to our team.
+                    </p>
+                    
+                    <div style="background-color: #f8f9fa; border-left: 4px solid #28a745; padding: 20px; margin: 25px 0; border-radius: 4px;">
+                        <h3 style="margin-top: 0; color: #28a745; font-size: 18px;">Offer Details</h3>
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <tr>
+                                <td style="padding: 8px 0; color: #666; width: 40%;"><strong>Job Title:</strong></td>
+                                <td style="padding: 8px 0; color: #333;">{job.title}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px 0; color: #666;"><strong>Expected Joining Date:</strong></td>
+                                <td style="padding: 8px 0; color: #333;">{join_date_str}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    
+                    <p style="font-size: 16px; color: #555; line-height: 1.6;">
+                        Please confirm your acceptance of this offer by replying to the company via the placement portal. We look forward to welcoming you aboard!
+                    </p>
+                    
+                    <p style="font-size: 16px; color: #555; line-height: 1.6; margin-top: 30px;">
+                        Warm welcome,<br>
+                        <strong>{company.name} Team</strong>
+                    </p>
+                </div>
+                <div style="background-color: #f4f6f9; padding: 15px; text-align: center; border-top: 1px solid #eee;">
+                    <p style="font-size: 12px; color: #999; margin: 0;">Powered by JobFinder Placement Portal</p>
+                </div>
+            </div>
+            """
+            send_email(user.email, subject, body)
         
     db.session.commit()
     return jsonify({"msg": "Application updated successfully"}), 200
@@ -300,9 +498,21 @@ def handle_messages(application_id):
         messages = Message.query.filter_by(application_id=application_id).order_by(Message.timestamp.asc()).all()
         result = []
         for m in messages:
+            sender_name = "Unknown"
+            sender_user = User.query.get(m.sender_id)
+            if sender_user:
+                if sender_user.role == 'student':
+                    stu = Student.query.filter_by(user_id=sender_user.id).first()
+                    if stu: sender_name = stu.name
+                elif sender_user.role == 'company':
+                    comp = Company.query.filter_by(user_id=sender_user.id).first()
+                    if comp: sender_name = comp.name
+
             result.append({
                 "id": m.id,
                 "sender_id": m.sender_id,
+                "sender_name": sender_name,
+                "is_mine": m.sender_id == current_user['id'],
                 "content": m.content,
                 "timestamp": m.timestamp.isoformat()
             })
@@ -326,6 +536,8 @@ def handle_messages(application_id):
         return jsonify({
             "id": new_msg.id,
             "sender_id": new_msg.sender_id,
+            "sender_name": company.name,
+            "is_mine": True,
             "content": new_msg.content,
             "timestamp": new_msg.timestamp.isoformat()
         }), 201

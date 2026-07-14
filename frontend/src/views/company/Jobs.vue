@@ -1,81 +1,165 @@
 <template>
   <div class="mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-      <h2>Manage Job Postings</h2>
-      <button class="btn btn-primary" @click="showCreateModal = true">Post New Job</button>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2 class="fw-bold mb-0">Manage Job Postings</h2>
+      <button class="btn btn-primary px-4 fw-medium shadow-sm rounded-pill d-flex align-items-center" @click="openCreateModal">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="me-2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        Post New Job
+      </button>
     </div>
 
-    <!-- Create Job Modal -->
-    <div v-if="showCreateModal" class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
-      <div class="modal-dialog">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">Post a New Job</h5>
-            <button type="button" class="btn-close" @click="showCreateModal = false"></button>
+    <!-- Create/Edit Job Modal -->
+    <div v-if="showModal" class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+      <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow rounded-4">
+          <div class="modal-header border-0 pb-0 pt-4 px-4">
+            <h5 class="modal-title fw-bold">{{ isEditing ? 'Edit Job Posting' : 'Post a New Job' }}</h5>
+            <button type="button" class="btn-close" @click="closeModal"></button>
           </div>
-          <form @submit.prevent="createJob">
-            <div class="modal-body">
-              <div class="mb-3">
-                <label>Job Title</label>
-                <input type="text" v-model="newJob.title" class="form-control" required>
-              </div>
-              <div class="mb-3">
-                <label>Description</label>
-                <textarea v-model="newJob.description" class="form-control" rows="3" required></textarea>
-              </div>
-              <div class="mb-3">
-                <label>Salary</label>
-                <input type="text" v-model="newJob.salary" class="form-control" placeholder="e.g. 50,000 USD">
-              </div>
-              <div class="mb-3">
-                <label>Skills Required</label>
-                <input type="text" v-model="newJob.skills_required" class="form-control" placeholder="e.g. Python, Vue, SQL">
+          <form @submit.prevent="saveJob">
+            <div class="modal-body p-4">
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label class="form-label fw-medium">Job Title *</label>
+                  <input type="text" v-model="jobForm.title" class="form-control" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label fw-medium">Salary</label>
+                  <input type="text" v-model="jobForm.salary" class="form-control" placeholder="e.g. 50,000 USD">
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label fw-medium">Skills Required</label>
+                  <input type="text" v-model="jobForm.skills_required" class="form-control" placeholder="e.g. Python, Vue, SQL">
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label fw-medium">Application Deadline</label>
+                  <input type="datetime-local" v-model="jobForm.deadline" class="form-control">
+                </div>
+                <div class="col-12 mb-3">
+                  <label class="form-label fw-medium">Description *</label>
+                  <textarea v-model="jobForm.description" class="form-control" rows="5" required></textarea>
+                </div>
               </div>
             </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" @click="showCreateModal = false">Cancel</button>
-              <button type="submit" class="btn btn-primary">Post Job</button>
+            <div class="modal-footer border-0 pt-0 pb-4 px-4">
+              <button type="button" class="btn btn-light fw-medium rounded-pill px-4" @click="closeModal">Cancel</button>
+              <button type="submit" class="btn btn-primary fw-medium rounded-pill px-4">{{ isEditing ? 'Save Changes' : 'Post Job' }}</button>
             </div>
           </form>
         </div>
       </div>
     </div>
 
-    <div class="table-responsive">
-      <table class="table table-striped">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Title</th>
-            <th>Salary</th>
-            <th>Status</th>
-            <th>Created At</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="job in jobs" :key="job.id">
-            <td>{{ job.id }}</td>
-            <td>{{ job.title }}</td>
-            <td>{{ job.salary }}</td>
-            <td>
-              <span class="badge" :class="statusClass(job.status)">{{ job.status }}</span>
-            </td>
-            <td>{{ new Date(job.created_at).toLocaleDateString() }}</td>
-            <td>
-              <button 
-                v-if="job.status === 'Approved'" 
-                @click="updateStatus(job.id, 'Closed')" 
-                class="btn btn-sm btn-danger me-1">Close Job</button>
-              <button 
-                v-if="job.status === 'Closed'" 
-                @click="updateStatus(job.id, 'Approved')" 
-                class="btn btn-sm btn-success me-1">Re-open</button>
-              <router-link :to="`/company/applications?job_id=${job.id}`" class="btn btn-sm btn-info">View Apps</router-link>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    <!-- View Details Modal -->
+    <div v-if="showDetailsModal && selectedJob" class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+      <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow rounded-4">
+          <div class="modal-header border-0 pb-0 pt-4 px-4">
+            <h5 class="modal-title fw-bold">Job Details</h5>
+            <button type="button" class="btn-close" @click="showDetailsModal = false"></button>
+          </div>
+          <div class="modal-body p-4">
+            <h4 class="fw-bold mb-4">{{ selectedJob.title }}</h4>
+            <div class="row mb-4">
+              <div class="col-md-4 mb-4">
+                <div class="text-muted small fw-medium text-uppercase mb-1">Salary</div>
+                <div class="fw-medium">{{ selectedJob.salary || 'Not specified' }}</div>
+              </div>
+              <div class="col-md-4 mb-4">
+                <div class="text-muted small fw-medium text-uppercase mb-1">Skills</div>
+                <div class="fw-medium">{{ selectedJob.skills_required || 'Any' }}</div>
+              </div>
+              <div class="col-md-4 mb-4">
+                <div class="text-muted small fw-medium text-uppercase mb-1">Status</div>
+                <div><span class="badge rounded-pill px-3 py-2" :class="statusClass(selectedJob.status)">{{ selectedJob.status }}</span></div>
+              </div>
+              <div class="col-md-4 mb-3">
+                <div class="text-muted small fw-medium text-uppercase mb-1">Posted On</div>
+                <div class="fw-medium">{{ new Date(selectedJob.created_at).toLocaleDateString() }}</div>
+              </div>
+              <div class="col-md-4 mb-3">
+                <div class="text-muted small fw-medium text-uppercase mb-1">Deadline</div>
+                <div class="fw-medium text-danger">{{ selectedJob.deadline ? new Date(selectedJob.deadline).toLocaleString() : 'No deadline' }}</div>
+              </div>
+            </div>
+            <div class="mb-2">
+              <div class="text-muted small fw-medium text-uppercase mb-2">Description</div>
+              <p style="white-space: pre-wrap;">{{ selectedJob.description }}</p>
+            </div>
+          </div>
+          <div class="modal-footer border-0 pt-0 pb-4 px-4">
+            <button type="button" class="btn btn-light fw-medium rounded-pill px-4" @click="showDetailsModal = false">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th class="py-3 px-4 fw-medium text-muted border-0">Job Details</th>
+              <th class="py-3 fw-medium text-muted border-0">Status</th>
+              <th class="py-3 fw-medium text-muted border-0">Dates</th>
+              <th class="py-3 text-end px-4 fw-medium text-muted border-0">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="job in jobs" :key="job.id">
+              <td class="px-4 py-3 border-0 border-bottom">
+                <div class="fw-bold text-dark fs-6">{{ job.title }}</div>
+                <div class="text-muted small d-flex gap-2 mt-1 align-items-center">
+                  <span>{{ job.salary || 'No salary info' }}</span>
+                  <span>&bull;</span>
+                  <span class="text-truncate" style="max-width: 200px;">{{ job.skills_required || 'No specific skills' }}</span>
+                </div>
+              </td>
+              <td class="py-3 border-0 border-bottom">
+                <span class="badge rounded-pill px-3 py-2 fw-medium" :class="statusClass(job.status)">{{ job.status }}</span>
+              </td>
+              <td class="py-3 border-0 border-bottom">
+                <div class="small mb-1">
+                  <span class="text-muted">Posted:</span> <span class="fw-medium">{{ new Date(job.created_at).toLocaleDateString() }}</span>
+                </div>
+                <div class="small">
+                  <span class="text-muted">Deadline:</span> <span class="fw-medium text-danger">{{ job.deadline ? new Date(job.deadline).toLocaleDateString() : 'None' }}</span>
+                </div>
+              </td>
+              <td class="text-end px-4 py-3 border-0 border-bottom">
+                <div class="d-flex justify-content-end gap-2 align-items-center">
+                  <button @click="viewDetails(job)" class="btn btn-sm btn-light rounded-3 px-2 py-1 fw-medium text-primary shadow-sm border" title="View Details">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                  </button>
+                  <button @click="openEditModal(job)" class="btn btn-sm btn-light rounded-3 px-2 py-1 fw-medium text-secondary shadow-sm border" title="Edit">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                  </button>
+                  <button @click="deleteJob(job.id)" class="btn btn-sm btn-light rounded-3 px-2 py-1 fw-medium text-danger shadow-sm border" title="Delete">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                  </button>
+                  <button v-if="job.status === 'Approved'" @click="updateStatus(job.id, 'Closed')" class="btn btn-sm btn-light rounded-3 px-2 py-1 fw-medium text-warning shadow-sm border" title="Close Job">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                  </button>
+                  <button v-if="job.status === 'Closed'" @click="updateStatus(job.id, 'Approved')" class="btn btn-sm btn-light rounded-3 px-2 py-1 fw-medium text-success shadow-sm border" title="Re-open Job">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+                  </button>
+                  <router-link :to="`/company/applications?job_id=${job.id}`" class="btn btn-sm btn-primary rounded-3 px-3 py-1 fw-medium shadow-sm border-0 d-flex align-items-center gap-1 ms-1" title="View Applications">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                    Applicants
+                  </router-link>
+                </div>
+              </td>
+            </tr>
+            <tr v-if="jobs.length === 0">
+              <td colspan="4" class="text-center py-5 text-muted border-0">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="mb-3 opacity-50"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+                <h5 class="fw-bold">No jobs posted yet</h5>
+                <p>Click "Post New Job" to get started.</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 </template>
@@ -88,12 +172,17 @@ export default {
     return {
       jobs: [],
       search: '',
-      showCreateModal: false,
-      newJob: {
+      showModal: false,
+      showDetailsModal: false,
+      isEditing: false,
+      selectedJob: null,
+      jobForm: {
+        id: null,
         title: '',
         description: '',
         salary: '',
-        skills_required: ''
+        skills_required: '',
+        deadline: ''
       }
     }
   },
@@ -113,20 +202,71 @@ export default {
     async fetchJobs() {
       try {
         const response = await api.get(`/company/jobs?search=${this.search}`);
-        this.jobs = response.data;
+        this.jobs = response.data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
       } catch (error) {
         console.error('Error fetching jobs:', error);
       }
     },
-    async createJob() {
+    openCreateModal() {
+      this.isEditing = false;
+      this.jobForm = { id: null, title: '', description: '', salary: '', skills_required: '', deadline: '' };
+      this.showModal = true;
+    },
+    openEditModal(job) {
+      this.isEditing = true;
+      let deadlineStr = '';
+      if (job.deadline) {
+        const d = new Date(job.deadline);
+        deadlineStr = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+      }
+      this.jobForm = {
+        id: job.id,
+        title: job.title,
+        description: job.description,
+        salary: job.salary,
+        skills_required: job.skills_required,
+        deadline: deadlineStr
+      };
+      this.showModal = true;
+    },
+    closeModal() {
+      this.showModal = false;
+    },
+    viewDetails(job) {
+      this.selectedJob = job;
+      this.showDetailsModal = true;
+    },
+    async saveJob() {
       try {
-        await api.post('/company/jobs', this.newJob);
-        this.showCreateModal = false;
-        this.newJob = { title: '', description: '', salary: '', skills_required: '' };
+        const payload = { ...this.jobForm };
+        if (payload.deadline) {
+            payload.deadline = new Date(payload.deadline).toISOString();
+        } else {
+            payload.deadline = null;
+        }
+
+        if (this.isEditing) {
+          await api.put(`/company/jobs/${this.jobForm.id}`, payload);
+          alert('Job updated successfully. All applied students have been notified via email.');
+        } else {
+          await api.post('/company/jobs', payload);
+          alert('Job created successfully. It will be visible to students once approved by the admin.');
+        }
+        this.closeModal();
         this.fetchJobs();
-        alert('Job created successfully. It will be visible to students once approved by the admin.');
       } catch (error) {
-        console.error('Error creating job:', error);
+        console.error('Error saving job:', error);
+        alert('Failed to save job: ' + (error.response?.data?.msg || error.message));
+      }
+    },
+    async deleteJob(id) {
+      if (confirm('Are you sure you want to delete this job? This cannot be undone.')) {
+        try {
+          await api.delete(`/company/jobs/${id}`);
+          this.fetchJobs();
+        } catch (error) {
+          console.error('Error deleting job:', error);
+        }
       }
     },
     async updateStatus(id, status) {
@@ -138,11 +278,11 @@ export default {
       }
     },
     statusClass(status) {
-      if (status === 'Approved') return 'bg-success';
-      if (status === 'Pending') return 'bg-warning text-dark';
-      if (status === 'Closed') return 'bg-secondary';
-      if (status === 'Rejected') return 'bg-danger';
-      return 'bg-primary';
+      if (status === 'Approved') return 'bg-success bg-opacity-10 text-success';
+      if (status === 'Pending') return 'bg-warning bg-opacity-10 text-warning';
+      if (status === 'Closed') return 'bg-secondary bg-opacity-10 text-secondary';
+      if (status === 'Rejected') return 'bg-danger bg-opacity-10 text-danger';
+      return 'bg-primary bg-opacity-10 text-primary';
     }
   }
 }

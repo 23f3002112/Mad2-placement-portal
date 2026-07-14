@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify, send_file
-from models import db, User, Student, Company, JobPosition, Application, ExportJob
+from models import db, User, Student, Company, JobPosition, Application, ExportJob, Placement
 from flask_jwt_extended import jwt_required, get_jwt_identity
 import json
 import os
@@ -143,6 +143,7 @@ def get_jobs():
             "skills_required": j.skills_required,
             "company_name": j.company.name if j.company else "Unknown",
             "has_applied": j.id in applied_job_ids,
+            "deadline": j.deadline.isoformat() if j.deadline else None,
             "created_at": j.created_at
         })
     return jsonify(result), 200
@@ -233,6 +234,73 @@ def download_export(job_id):
         
     return send_file(os.path.abspath(job.file_path), as_attachment=True)
 
+@student_bp.route('/applications/<int:app_id>/respond', methods=['PUT'])
+@jwt_required()
+def respond_offer(app_id):
+    student, err_resp, err_code = get_student_or_403()
+    if err_resp: return err_resp, err_code
+    
+    application = Application.query.get_or_404(app_id)
+    if application.student_id != student.id:
+        return jsonify({"msg": "Unauthorized"}), 403
+        
+    data = request.get_json()
+    new_status = data.get('status')
+    
+    if application.status != 'Offer':
+        return jsonify({"msg": "Application is not in Offer status"}), 400
+        
+    if new_status in ['Placed', 'Rejected']:
+        application.status = new_status
+        job = JobPosition.query.get(application.job_id)
+        company = Company.query.get(job.company_id)
+        
+        if new_status == 'Placed':
+            existing_placement = Placement.query.filter_by(student_id=application.student_id, job_id=job.id).first()
+            if not existing_placement:
+                placement = Placement(
+                    student_id=application.student_id,
+                    company_id=company.id,
+                    job_id=job.id,
+                    position_offered=job.title,
+                    salary_offered=job.salary
+                )
+                db.session.add(placement)
+                
+            comp_user = User.query.get(company.user_id)
+            if comp_user and comp_user.email:
+                from mail import send_email
+                subject = f"Offer Accepted: {student.name} for {job.title}"
+                body = f"""
+                <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eee; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                    <div style="background-color: #28a745; padding: 30px; text-align: center;">
+                        <h1 style="color: white; margin: 0; font-size: 24px;">Offer Accepted</h1>
+                    </div>
+                    <div style="padding: 30px; background-color: #ffffff;">
+                        <p style="font-size: 16px; color: #333; margin-bottom: 20px;">Dear <strong>{company.name}</strong>,</p>
+                        
+                        <p style="font-size: 16px; color: #555; line-height: 1.6;">
+                            We are pleased to inform you that <strong>{student.name}</strong> has formally accepted your job offer for the position of <strong>{job.title}</strong>.
+                        </p>
+                        
+                        <p style="font-size: 16px; color: #555; line-height: 1.6;">
+                            The candidate's status has been successfully updated to "Placed" in your portal.
+                        </p>
+                        
+                        <p style="font-size: 16px; color: #555; line-height: 1.6; margin-top: 30px;">
+                            Best regards,<br>
+                            <strong>JobFinder Placement Portal</strong>
+                        </p>
+                    </div>
+                </div>
+                """
+                send_email(comp_user.email, subject, body)
+                
+        db.session.commit()
+        return jsonify({"msg": "Offer response recorded successfully"}), 200
+        
+    return jsonify({"msg": "Invalid status"}), 400
+
 from models import Message
 
 @student_bp.route('/messages/conversations', methods=['GET'])
@@ -291,9 +359,21 @@ def handle_messages(application_id):
         messages = Message.query.filter_by(application_id=application_id).order_by(Message.timestamp.asc()).all()
         result = []
         for m in messages:
+            sender_name = "Unknown"
+            sender_user = User.query.get(m.sender_id)
+            if sender_user:
+                if sender_user.role == 'student':
+                    stu = Student.query.filter_by(user_id=sender_user.id).first()
+                    if stu: sender_name = stu.name
+                elif sender_user.role == 'company':
+                    comp = Company.query.filter_by(user_id=sender_user.id).first()
+                    if comp: sender_name = comp.name
+
             result.append({
                 "id": m.id,
                 "sender_id": m.sender_id,
+                "sender_name": sender_name,
+                "is_mine": m.sender_id == current_user['id'],
                 "content": m.content,
                 "timestamp": m.timestamp.isoformat()
             })
@@ -320,6 +400,8 @@ def handle_messages(application_id):
         return jsonify({
             "id": new_msg.id,
             "sender_id": new_msg.sender_id,
+            "sender_name": student.name,
+            "is_mine": True,
             "content": new_msg.content,
             "timestamp": new_msg.timestamp.isoformat()
         }), 201

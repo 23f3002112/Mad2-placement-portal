@@ -27,7 +27,7 @@
             <td>{{ new Date(app.date_applied).toLocaleDateString() }}</td>
             <td>
               <span class="badge" :class="statusClass(app.status)">{{ app.status }}</span>
-              <div v-if="app.interview_date" class="small text-muted mt-1">
+              <div v-if="app.interview_date && (app.status === 'Interview' || app.status === 'Shortlisted')" class="small text-muted mt-1">
                 Interview: {{ new Date(app.interview_date).toLocaleString() }}
               </div>
             </td>
@@ -65,10 +65,40 @@
                 <label>Feedback</label>
                 <textarea v-model="updateForm.feedback" class="form-control" rows="3" placeholder="Provide feedback to the student"></textarea>
               </div>
-              <div class="mb-3" v-if="updateForm.status === 'Shortlisted'">
-                <label>Schedule Interview Date & Time</label>
-                <input type="datetime-local" v-model="updateForm.interview_date" class="form-control">
-              </div>
+              <template v-if="updateForm.status === 'Interview' || updateForm.status === 'Shortlisted'">
+                <div class="mb-3">
+                  <label>Schedule Interview Date & Time</label>
+                  <input type="datetime-local" v-model="updateForm.interview_date" class="form-control" required>
+                </div>
+                <div class="mb-3" v-if="updateForm.status === 'Interview'">
+                  <label class="d-block mb-2">Interview Type</label>
+                  <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" v-model="updateForm.interview_type" value="Online" id="typeOnline">
+                    <label class="form-check-label" for="typeOnline">Online</label>
+                  </div>
+                  <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" v-model="updateForm.interview_type" value="In-Person" id="typeInPerson">
+                    <label class="form-check-label" for="typeInPerson">In-Person</label>
+                  </div>
+                </div>
+                <div class="mb-3" v-if="updateForm.status === 'Interview' && updateForm.interview_type === 'Online'">
+                  <label>Google Meet Link</label>
+                  <input type="url" v-model="updateForm.interview_location_or_link" class="form-control" placeholder="https://meet.google.com/..." required>
+                </div>
+                <div class="mb-3" v-if="updateForm.status === 'Interview' && updateForm.interview_type === 'In-Person'">
+                  <label>Location / Address</label>
+                  <input type="text" v-model="updateForm.interview_location_or_link" class="form-control" placeholder="Office Address, Room No, etc." required>
+                </div>
+              </template>
+              <template v-if="updateForm.status === 'Offer'">
+                <div class="mb-3">
+                  <label>Expected Joining Date</label>
+                  <input type="date" v-model="updateForm.joining_date" class="form-control" required>
+                </div>
+                <div class="alert alert-info small mt-2 mb-0">
+                  An official offer letter email will be sent to the candidate containing the job title and joining date.
+                </div>
+              </template>
             </div>
             <div class="modal-footer">
               <button type="button" class="btn btn-secondary" @click="closeModal">Cancel</button>
@@ -119,7 +149,10 @@ export default {
         id: null,
         status: '',
         feedback: '',
-        interview_date: ''
+        interview_date: '',
+        interview_type: 'Online',
+        interview_location_or_link: '',
+        joining_date: ''
       }
     }
   },
@@ -163,13 +196,16 @@ export default {
         id: app.id,
         status: app.status,
         feedback: app.feedback || '',
-        interview_date: app.interview_date ? app.interview_date.substring(0, 16) : '' // format for datetime-local
+        interview_date: app.interview_date ? app.interview_date.substring(0, 16) : '',
+        interview_type: app.interview_type || 'Online',
+        interview_location_or_link: app.interview_location_or_link || '',
+        joining_date: ''
       };
       this.showModal = true;
     },
     closeModal() {
       this.showModal = false;
-      this.updateForm = { id: null, status: '', feedback: '', interview_date: '' };
+      this.updateForm = { id: null, status: '', feedback: '', interview_date: '', interview_type: 'Online', interview_location_or_link: '', joining_date: '' };
     },
     async updateStatus() {
       try {
@@ -177,8 +213,17 @@ export default {
           status: this.updateForm.status,
           feedback: this.updateForm.feedback
         };
-        if ((this.updateForm.status === 'Shortlisted' || this.updateForm.status === 'Interview') && this.updateForm.interview_date) {
-          payload.interview_date = new Date(this.updateForm.interview_date).toISOString();
+        if (this.updateForm.status === 'Shortlisted' || this.updateForm.status === 'Interview') {
+          if (this.updateForm.interview_date) {
+            payload.interview_date = new Date(this.updateForm.interview_date).toISOString();
+          }
+          if (this.updateForm.status === 'Interview') {
+            payload.interview_type = this.updateForm.interview_type;
+            payload.interview_location_or_link = this.updateForm.interview_location_or_link;
+          }
+        }
+        if (this.updateForm.status === 'Offer') {
+          payload.joining_date = this.updateForm.joining_date;
         }
         
         await api.put(`/company/applications/${this.updateForm.id}/status`, payload);

@@ -23,6 +23,10 @@
             </td>
             <td class="py-3 px-4 border-0">
               <button class="btn btn-sm btn-outline-primary px-3 fw-medium" style="font-size: 12px; border-radius: 4px;" @click="viewDetails(app)">View</button>
+              <template v-if="app.status === 'Offer'">
+                <button class="btn btn-sm btn-success ms-2 px-3 fw-medium" style="font-size: 12px; border-radius: 4px;" @click="respondOffer(app, 'Placed')">Accept</button>
+                <button class="btn btn-sm btn-danger ms-2 px-3 fw-medium" style="font-size: 12px; border-radius: 4px;" @click="respondOffer(app, 'Rejected')">Reject</button>
+              </template>
             </td>
           </tr>
           <tr v-if="applications.length === 0">
@@ -115,6 +119,17 @@ export default {
     downloadOffer(app) {
       // Dummy action for downloading offer letter
       alert(`Downloading offer letter for ${app.job_title} at ${app.company_name}...`);
+    },
+    async respondOffer(app, status) {
+      if (!confirm(`Are you sure you want to ${status === 'Placed' ? 'accept' : 'reject'} this offer?`)) return;
+      try {
+        await api.put(`/student/applications/${app.id}/respond`, { status });
+        this.fetchApplications();
+        alert(`You have ${status === 'Placed' ? 'accepted' : 'rejected'} the offer.`);
+      } catch (error) {
+        console.error('Error responding to offer:', error);
+        alert('An error occurred. Please try again.');
+      }
     }
   }
 }

@@ -47,15 +47,18 @@
               v-for="msg in messages" 
               :key="msg.id"
               class="mb-3 d-flex"
-              :class="{'justify-content-end': msg.sender_id === currentUserId, 'justify-content-start': msg.sender_id !== currentUserId}"
+              :class="{'justify-content-end': msg.is_mine, 'justify-content-start': !msg.is_mine}"
             >
               <div 
                 class="p-3 rounded-3 shadow-sm"
                 style="max-width: 75%;"
-                :class="{'bg-primary text-white': msg.sender_id === currentUserId, 'bg-white text-dark border': msg.sender_id !== currentUserId}"
+                :class="{'bg-primary text-white': msg.is_mine, 'bg-white text-dark border': !msg.is_mine}"
               >
+                <div style="font-size: 11px; font-weight: bold; margin-bottom: 4px;" :class="{'text-white-50': msg.is_mine, 'text-primary': !msg.is_mine}">
+                  {{ msg.sender_name }}
+                </div>
                 <div style="font-size: 14.5px;">{{ msg.content }}</div>
-                <div class="text-end mt-1" :class="{'text-white-50': msg.sender_id === currentUserId, 'text-muted': msg.sender_id !== currentUserId}" style="font-size: 10px;">
+                <div class="text-end mt-1" :class="{'text-white-50': msg.is_mine, 'text-muted': !msg.is_mine}" style="font-size: 10px;">
                   {{ formatTime(msg.timestamp) }}
                 </div>
               </div>

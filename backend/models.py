@@ -17,6 +17,10 @@ class Company(db.Model):
     industry = db.Column(db.String(100))
     location = db.Column(db.String(100))
     description = db.Column(db.Text)
+    website = db.Column(db.String(255))
+    employee_count = db.Column(db.String(50))
+    founded_year = db.Column(db.String(10))
+    contact_email = db.Column(db.String(120))
     is_approved = db.Column(db.Boolean, default=False)
     
     user = db.relationship('User', backref=db.backref('company_profile', uselist=False))
@@ -44,6 +48,7 @@ class JobPosition(db.Model):
     salary = db.Column(db.String(50))
     skills_required = db.Column(db.String(200))
     status = db.Column(db.String(20), default='Pending') # 'Pending', 'Approved', 'Closed', 'Rejected'
+    deadline = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     company = db.relationship('Company', backref=db.backref('job_positions', lazy=True))
@@ -52,9 +57,11 @@ class Application(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
     job_id = db.Column(db.Integer, db.ForeignKey('job_position.id'), nullable=False)
-    status = db.Column(db.String(20), default='Applied') # Applied, Shortlisted, Selected, Rejected
+    status = db.Column(db.String(20), default='Applied') # Applied, Shortlisted, Selected, Rejected, Interview
     feedback = db.Column(db.Text)
     interview_date = db.Column(db.DateTime)
+    interview_type = db.Column(db.String(20)) # 'Online', 'In-Person'
+    interview_location_or_link = db.Column(db.String(255))
     date_applied = db.Column(db.DateTime, default=datetime.utcnow)
     
     student = db.relationship('Student', backref=db.backref('applications', lazy=True))

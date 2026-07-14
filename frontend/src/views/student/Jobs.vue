@@ -37,7 +37,7 @@
               </div>
               <div class="d-flex align-items-center gap-3 w-100 w-md-auto justify-content-end">
                 <div class="text-end d-none d-md-block">
-                  <div class="text-muted" style="font-size: 9px; font-weight: 600; letter-spacing: 0.5px;">POSTED {{ getDaysAgo(job.created_at) }} DAYS AGO</div>
+                  <div class="text-muted" style="font-size: 9px; font-weight: 600; letter-spacing: 0.5px;">{{ getDaysAgoText(job.created_at) }}</div>
                   <div class="mt-1" style="font-size: 9px; font-weight: 700; color: #dc2626; letter-spacing: 0.5px;" v-if="job.deadline">
                     DEADLINE: {{ new Date(job.deadline).toLocaleDateString() }}
                   </div>
@@ -103,13 +103,15 @@ export default {
         }
       }
     },
-    getDaysAgo(dateString) {
-      if (!dateString) return 1;
+    getDaysAgoText(dateString) {
+      if (!dateString) return 'POSTED TODAY';
       const date = new Date(dateString);
       const today = new Date();
-      const diffTime = Math.abs(today - date);
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-      return diffDays;
+      const diffTime = today.getTime() - date.getTime();
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)); 
+      if (diffDays === 0) return 'POSTED TODAY';
+      if (diffDays === 1) return 'POSTED 1 DAY AGO';
+      return `POSTED ${diffDays} DAYS AGO`;
     }
   }
 }

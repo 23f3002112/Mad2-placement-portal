@@ -199,6 +199,17 @@ def approve_job(job_id):
     job.status = 'Approved'
     db.session.commit()
     cache.clear()
+    
+    company = job.company
+    if company:
+        user = User.query.get(company.user_id)
+        if user:
+            to_email = company.contact_email if company.contact_email else user.email
+            from mail import send_email
+            subject = f"Your job post '{job.title}' has been approved!"
+            body = f"Hello {company.name},\n\nGreat news! Your recent job posting for '{job.title}' has been approved by our administration team. It is now live and visible to all students on the platform.\n\nBest regards,\nPlacement Portal Admin"
+            send_email(to_email, subject, body)
+            
     return jsonify({"msg": "Job approved successfully"}), 200
 
 @admin_bp.route('/jobs/<int:job_id>/reject', methods=['POST'])
