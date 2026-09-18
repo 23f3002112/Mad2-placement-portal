@@ -1,3 +1,7 @@
+<script setup>
+import { Briefcase, CheckCircle, Edit, Eye, Trash2, Users, X } from 'lucide-vue-next';
+</script>
+
 <template>
   <div class="mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -129,22 +133,22 @@
               <td class="text-end px-4 py-3 border-0 border-bottom">
                 <div class="d-flex justify-content-end gap-2 align-items-center">
                   <button @click="viewDetails(job)" class="btn btn-sm btn-light rounded-3 px-2 py-1 fw-medium text-primary shadow-sm border" title="View Details">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                    <Eye :size="16" />
                   </button>
                   <button @click="openEditModal(job)" class="btn btn-sm btn-light rounded-3 px-2 py-1 fw-medium text-secondary shadow-sm border" title="Edit">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                    <Edit :size="16" />
                   </button>
                   <button @click="deleteJob(job.id)" class="btn btn-sm btn-light rounded-3 px-2 py-1 fw-medium text-danger shadow-sm border" title="Delete">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    <Trash2 :size="16" />
                   </button>
                   <button v-if="job.status === 'Approved'" @click="updateStatus(job.id, 'Closed')" class="btn btn-sm btn-light rounded-3 px-2 py-1 fw-medium text-warning shadow-sm border" title="Close Job">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                    <X :size="16" />
                   </button>
                   <button v-if="job.status === 'Closed'" @click="updateStatus(job.id, 'Approved')" class="btn btn-sm btn-light rounded-3 px-2 py-1 fw-medium text-success shadow-sm border" title="Re-open Job">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+                    <CheckCircle :size="16" />
                   </button>
                   <router-link :to="`/company/applications?job_id=${job.id}`" class="btn btn-sm btn-primary rounded-3 px-3 py-1 fw-medium shadow-sm border-0 d-flex align-items-center gap-1 ms-1" title="View Applications">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                    <Users :size="16" />
                     Applicants
                   </router-link>
                 </div>
@@ -152,7 +156,7 @@
             </tr>
             <tr v-if="jobs.length === 0">
               <td colspan="4" class="text-center py-5 text-muted border-0">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="mb-3 opacity-50"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+                <Briefcase class="mb-3 opacity-50" :size="48" />
                 <h5 class="fw-bold">No jobs posted yet</h5>
                 <p>Click "Post New Job" to get started.</p>
               </td>

@@ -1,3 +1,7 @@
+<script setup>
+import { MessageSquare } from 'lucide-vue-next';
+</script>
+
 <template>
   <div class="card border-0 shadow-sm rounded-3 overflow-hidden" style="height: 75vh;">
     <div class="row g-0 h-100">
@@ -83,7 +87,7 @@
         </template>
         
         <div v-else class="h-100 d-flex flex-column align-items-center justify-content-center text-muted bg-light">
-          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="mb-3"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+          <MessageSquare class="mb-3" :size="64" />
           <h4 class="fw-normal">Select a conversation</h4>
           <p>Read your messages from companies here.</p>
         </div>

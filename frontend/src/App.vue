@@ -13,13 +13,13 @@
         <div class="collapse navbar-collapse" id="navbarNav">
           <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-4" v-if="!isLoggedIn">
             <li class="nav-item">
-              <a class="nav-link text-dark fw-medium mx-2" href="#">Discover</a>
+              <router-link class="nav-link text-dark fw-medium mx-2" to="/">Discover</router-link>
             </li>
             <li class="nav-item">
-              <a class="nav-link text-dark fw-medium mx-2" href="#">For job seekers</a>
+              <router-link class="nav-link text-dark fw-medium mx-2" to="/register?role=student">For job seekers</router-link>
             </li>
             <li class="nav-item">
-              <a class="nav-link text-dark fw-medium mx-2" href="#">For companies</a>
+              <router-link class="nav-link text-dark fw-medium mx-2" to="/register?role=company">For companies</router-link>
             </li>
           </ul>
           
@@ -34,7 +34,7 @@
           <div class="navbar-nav ms-auto align-items-center flex-row gap-4" v-else>
             <!-- Search Bar -->
             <form class="position-relative me-2" @submit.prevent="handleSearch">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="position-absolute text-muted" style="left: 12px; top: 50%; transform: translateY(-50%);"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              <Search class="position-absolute text-muted" :size="18" />
               <input type="text" v-model="globalSearch" class="form-control rounded-pill border-0 bg-light ps-5 pe-3 py-2" placeholder="Search everywhere..." style="width: 240px; font-size: 0.95rem;">
             </form>
             
@@ -72,14 +72,14 @@
             <div class="nav-item dropdown ms-2">
               <a class="nav-link dropdown-toggle d-flex align-items-center text-dark hide-caret" href="#" id="navbarDropdownMenuLink" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                 <div class="rounded-circle bg-light d-flex align-items-center justify-content-center text-secondary border border-2 profile-avatar transition-all">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                  <User :size="20" />
                 </div>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ms-2 text-muted"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                <ChevronDown class="ms-2 text-muted" :size="16" />
               </a>
               <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-3 rounded-3" aria-labelledby="navbarDropdownMenuLink" style="min-width: 200px;">
                 <li><h6 class="dropdown-header text-muted fw-semibold">My Account</h6></li>
                 <li><router-link :to="`/${userRole}`" class="dropdown-item py-2 fw-medium"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="me-2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg> Dashboard</router-link></li>
-                <li v-if="userRole !== 'admin'"><router-link :to="`/${userRole}/profile`" class="dropdown-item py-2 fw-medium"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="me-2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg> Profile</router-link></li>
+                <li v-if="userRole !== 'admin'"><router-link :to="`/${userRole}/profile`" class="dropdown-item py-2 fw-medium"><User class="me-2" :size="16" /> Profile</router-link></li>
                 <li><hr class="dropdown-divider"></li>
                 <li><button @click="logout" class="dropdown-item py-2 text-danger fw-medium"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="me-2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg> Logout</button></li>
               </ul>
@@ -145,6 +145,7 @@
 </template>
 
 <script setup>
+import { ChevronDown, Search, User } from 'lucide-vue-next';
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import api from './services/api'

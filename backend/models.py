@@ -4,6 +4,9 @@ from datetime import datetime
 db = SQLAlchemy()
 
 class User(db.Model):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(255), nullable=False)
@@ -11,6 +14,9 @@ class User(db.Model):
     active = db.Column(db.Boolean, default=True)
 
 class Company(db.Model):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     name = db.Column(db.String(100), nullable=False)
@@ -26,6 +32,9 @@ class Company(db.Model):
     user = db.relationship('User', backref=db.backref('company_profile', uselist=False))
 
 class Student(db.Model):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     name = db.Column(db.String(100), nullable=False)
@@ -41,6 +50,9 @@ class Student(db.Model):
     user = db.relationship('User', backref=db.backref('student_profile', uselist=False))
 
 class JobPosition(db.Model):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
     id = db.Column(db.Integer, primary_key=True)
     company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
     title = db.Column(db.String(100), nullable=False)
@@ -54,6 +66,9 @@ class JobPosition(db.Model):
     company = db.relationship('Company', backref=db.backref('job_positions', lazy=True))
 
 class Application(db.Model):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
     id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
     job_id = db.Column(db.Integer, db.ForeignKey('job_position.id'), nullable=False)
@@ -68,6 +83,9 @@ class Application(db.Model):
     job = db.relationship('JobPosition', backref=db.backref('applications', lazy=True))
 
 class Placement(db.Model):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
     id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
     company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
@@ -81,6 +99,9 @@ class Placement(db.Model):
     job = db.relationship('JobPosition', backref=db.backref('placement_record', uselist=False))
 
 class ExportJob(db.Model):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     status = db.Column(db.String(20), default='Pending') # Pending, Completed, Failed
@@ -90,6 +111,9 @@ class ExportJob(db.Model):
     user = db.relationship('User', backref=db.backref('export_jobs', lazy=True))
 
 class Notification(db.Model):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     title = db.Column(db.String(150), nullable=False)
@@ -100,6 +124,9 @@ class Notification(db.Model):
     user = db.relationship('User', backref=db.backref('notifications', lazy=True, order_by='Notification.created_at.desc()'))
 
 class Message(db.Model):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
     id = db.Column(db.Integer, primary_key=True)
     sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     receiver_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)

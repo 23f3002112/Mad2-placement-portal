@@ -1,3 +1,7 @@
+<script setup>
+import { Layers } from 'lucide-vue-next';
+</script>
+
 <template>
   <div class="pb-5">
     <!-- Header -->
@@ -16,7 +20,7 @@
         <div class="p-4 border-bottom position-relative">
           <div class="d-flex align-items-start gap-3">
             <div class="border rounded-3 d-flex align-items-center justify-content-center bg-light overflow-hidden" style="width: 64px; height: 64px;">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
+              <Layers :size="32" />
             </div>
             <div class="flex-grow-1">
               <h5 class="fw-bold mb-1 text-dark" style="font-size: 16px;">{{ job.company_name }}</h5>

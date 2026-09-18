@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, send_file
+from flask import Blueprint, jsonify, send_file
 from models import db, Notification
 from flask_jwt_extended import jwt_required, get_jwt_identity
 import json

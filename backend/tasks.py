@@ -1,6 +1,5 @@
 import csv
 import os
-import time
 from datetime import datetime, timedelta
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas

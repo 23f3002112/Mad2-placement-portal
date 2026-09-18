@@ -1,3 +1,7 @@
+<script setup>
+import { FileText, Mail, Search, User } from 'lucide-vue-next';
+</script>
+
 <template>
   <div>
     <h3 class="fw-bold mb-4">Edit your profile</h3>
@@ -36,7 +40,7 @@
             <div class="d-flex align-items-start gap-4 mb-4">
               <div class="rounded-circle bg-light d-flex align-items-center justify-content-center border overflow-hidden" style="width: 72px; height: 72px;">
                 <img v-if="profile.photo_url" :src="profile.photo_url" style="width: 100%; height: 100%; object-fit: cover;">
-                <svg v-else width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                <Userv-else :size="32" />
               </div>
               <div>
                 <h3 class="fw-bold mb-1">{{ profile.name }}</h3>
@@ -64,7 +68,7 @@
               <h6 class="text-muted fw-medium small mb-2">Resume / CV</h6>
               
               <a v-if="profile.resume_url.includes('/static/uploads/')" :href="'http://127.0.0.1:5000/api/student/download_resume/' + profile.resume_url.split('/').pop()" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-2">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                <Mail :size="16" />
                 Download Resume
               </a>
 
@@ -105,7 +109,7 @@
                   <div class="mb-4 d-flex align-items-center gap-3">
                     <div class="rounded-circle bg-light d-flex align-items-center justify-content-center border overflow-hidden" style="width: 64px; height: 64px;">
                       <img v-if="profile.photo_url" :src="profile.photo_url" style="width: 100%; height: 100%; object-fit: cover;">
-                      <svg v-else width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                      <Userv-else />
                     </div>
                     <input type="file" class="d-none" ref="photoInput" @change="onPhotoSelected" accept="image/*">
                     <button type="button" class="btn btn-outline-dark fw-medium btn-sm px-3" @click="$refs.photoInput.click()">Upload a new photo</button>
@@ -161,7 +165,7 @@
                   <div class="mb-4">
                     <label class="form-label fw-bold text-dark small">Your Skills</label>
                     <div class="input-group">
-                      <span class="input-group-text bg-white text-muted border-end-0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></span>
+                      <span class="input-group-text bg-white text-muted border-end-0"><Search :size="16" /></span>
                       <input type="text" class="form-control border-start-0 ps-0" v-model="profile.skills" placeholder="e.g. Python, React">
                     </div>
                   </div>
@@ -192,13 +196,7 @@
                 <input type="file" class="d-none" ref="resumeInput" @change="onResumeSelected" accept=".doc,.docx,.pdf,.txt">
                 <div class="border border-secondary border-dashed rounded-3 p-5 text-center cursor-pointer hover-bg-light transition-all mb-4" @click="$refs.resumeInput.click()">
                   <div class="mb-3">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#0056b3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                      <polyline points="14 2 14 8 20 8"></polyline>
-                      <line x1="16" y1="13" x2="8" y2="13"></line>
-                      <line x1="16" y1="17" x2="8" y2="17"></line>
-                      <polyline points="10 9 9 9 8 9"></polyline>
-                    </svg>
+                    <FileText :size="48" />
                   </div>
                   <h6 class="text-primary fw-bold mb-0">Upload new file</h6>
                 </div>

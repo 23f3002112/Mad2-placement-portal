@@ -1,13 +1,10 @@
 from flask import Blueprint, request, jsonify
 from models import db, User, Student, Company, Notification
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
+from flask_jwt_extended import create_access_token
 import json
 from cache import cache
 from mail import send_email
-from google.oauth2 import id_token
-from google.auth.transport import requests as google_requests
-import jwt
 import string
 import random
 
