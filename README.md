@@ -3,6 +3,10 @@
 Placement Portal Application (PPA) V2.
 A comprehensive platform for Institutes, Companies, and Students to manage campus recruitment efficiently. Built with Flask and VueJS.
 
+## 🎥 Project Demo
+
+[▶️ Watch Project Demo Video](https://drive.google.com/file/d/1XTVkikTj41IaO5vYs25lu75u_r74WFRR/view?usp=sharing)
+
 ## Initial Setup / Installation
 
 If you are opening this project for the first time or on a new computer, you must install the dependencies first. `node_modules` and Python environments are excluded from the repository to save space.
